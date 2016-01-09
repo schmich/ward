@@ -2,6 +2,7 @@ package main
 
 import (
   "github.com/schmich/ward/store"
+  "github.com/schmich/ward/passgen"
   "golang.org/x/crypto/ssh/terminal"
   "gopkg.in/alecthomas/kingpin.v2"
   "github.com/fatih/color"
@@ -75,7 +76,13 @@ func (app *App) runNew() {
       panic("Passwords do not match.")
     }
   } else {
-    // Generate random password
+    password = passgen.NewPassword(&passgen.Options {
+      Length: 30,
+      Upper: true,
+      Lower: true,
+      Number: true,
+      Symbol: true,
+    })
   }
 
   website := app.readInput("Website: ")
