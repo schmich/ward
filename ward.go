@@ -328,45 +328,51 @@ func NewApp() *App {
 }
 
 func (app *App) runInit() {
-  master := app.promptMasterPassword("Master password: ")
-  confirm := app.promptMasterPassword("Master password (confirm): ")
+  password := app.readPassword("Master password: ")
+  confirm := app.readPassword("Master password (confirm): ")
 
-  if master != confirm {
+  if password != confirm {
     panic("Passwords do not match.")
   }
 
-  ward := Create("test.db", master)
+  ward := Create("test.db", password)
   defer ward.Close()
 }
 
-func (app *App) promptMasterPassword(prompt string) string {
-  print(color.BlueString(prompt))
+func (app *App) readInput(prompt string) string {
+  print(color.CyanString(prompt))
+  input, _ := bufio.NewReader(os.Stdin).ReadString('\n')
+  return input
+}
+
+func (app *App) readPassword(prompt string) string {
+  print(color.CyanString(prompt))
   password, _ := terminal.ReadPassword(int(os.Stdin.Fd()))
   println()
   return string(password)
 }
 
 func (app *App) runNew() {
-  master := app.promptMasterPassword("Master password: ")
+  master := app.readPassword("Master password: ")
+
   ward := Open("test.db", master)
   defer ward.Close()
 
-  reader := bufio.NewReader(os.Stdin)
+  login := app.readInput("Username: ")
 
-  cyan := color.New(color.FgCyan).PrintfFunc()
+  password := app.readPassword("Password (enter to generate): ")
+  if len(password) > 0 {
+    confirm := app.readPassword("Password (confirm): ")
 
-  cyan("Username: ")
-  login, _ := reader.ReadString('\n')
+    if confirm != password {
+      panic("Passwords do not match.")
+    }
+  } else {
+    // Generate random password
+  }
 
-  cyan("Password (enter to generate): ")
-  password, _ := terminal.ReadPassword(int(os.Stdin.Fd()))
-  println()
-
-  cyan("Website: ")
-  website, _ := reader.ReadString('\n')
-
-  cyan("Note: ")
-  note, _ := reader.ReadString('\n')
+  website := app.readInput("Website: ")
+  note := app.readInput("Note: ")
 
   ward.AddCredential(&Credential {
     login: login,
@@ -379,7 +385,8 @@ func (app *App) runNew() {
 }
 
 func (app *App) runCopy(query string) {
-  master := app.promptMasterPassword("Master password: ")
+  master := app.readPassword("Master password: ")
+
   ward := Open("test.db", master)
   defer ward.Close()
 
