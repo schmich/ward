@@ -1,12 +1,14 @@
 package main
 
-import "github.com/schmich/ward/store"
-import "golang.org/x/crypto/ssh/terminal"
-import "os"
-import "gopkg.in/alecthomas/kingpin.v2"
-import "fmt"
-import "bufio"
-import "github.com/fatih/color"
+import (
+  "github.com/schmich/ward/store"
+  "golang.org/x/crypto/ssh/terminal"
+  "gopkg.in/alecthomas/kingpin.v2"
+  "github.com/fatih/color"
+  "bufio"
+  "fmt"
+  "os"
+)
 
 type App struct {
   app *kingpin.Application

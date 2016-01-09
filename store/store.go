@@ -1,9 +1,11 @@
 package store
 
-import "database/sql"
-import _ "github.com/mattn/go-sqlite3"
-import "github.com/schmich/ward/crypto"
-import "strings"
+import (
+  "github.com/schmich/ward/crypto"
+  _ "github.com/mattn/go-sqlite3"
+  "database/sql"
+  "strings"
+)
 
 type Store struct {
   db *sql.DB

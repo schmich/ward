@@ -1,11 +1,13 @@
 package crypto
 
-import "crypto/aes"
-import "crypto/rand"
-import gocipher "crypto/cipher"
-import "golang.org/x/crypto/pbkdf2"
-import "golang.org/x/crypto/sha3"
-import "math/big"
+import (
+  "golang.org/x/crypto/pbkdf2"
+  "golang.org/x/crypto/sha3"
+  gocipher "crypto/cipher"
+  "crypto/aes"
+  "crypto/rand"
+  "math/big"
+)
 
 type Cipher struct {
   aead gocipher.AEAD
