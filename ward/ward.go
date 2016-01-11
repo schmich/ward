@@ -11,33 +11,9 @@ import (
   "os"
 )
 
-type App struct {
-  app *kingpin.Application
-  init *kingpin.CmdClause
-  add *kingpin.CmdClause
-  copy *kingpin.CmdClause
-  query *string
-}
-
-func NewApp() *App {
-  app := kingpin.New("ward", "Password manager.")
-  init := app.Command("init", "Create a new password database.")
-  add := app.Command("add", "Add a new credential.")
-  copy := app.Command("copy", "Copy password.")
-  query := copy.Arg("query", "Text to match.").Required().String()
-
-  return &App {
-    app: app,
-    init: init,
-    add: add,
-    copy: copy,
-    query: query,
-  }
-}
-
-func (app *App) runInit() {
-  password := app.readPassword("Master password: ")
-  confirm := app.readPassword("Master password (confirm): ")
+func runInit() {
+  password := readPassword("Master password: ")
+  confirm := readPassword("Master password (confirm): ")
 
   if password != confirm {
     panic("Passwords do not match.")
@@ -47,30 +23,30 @@ func (app *App) runInit() {
   defer db.Close()
 }
 
-func (app *App) readInput(prompt string) string {
+func readInput(prompt string) string {
   print(color.CyanString(prompt))
   input, _ := bufio.NewReader(os.Stdin).ReadString('\n')
   return input
 }
 
-func (app *App) readPassword(prompt string) string {
+func readPassword(prompt string) string {
   print(color.CyanString(prompt))
   password, _ := terminal.ReadPassword(int(os.Stdin.Fd()))
   println()
   return string(password)
 }
 
-func (app *App) runAdd() {
-  master := app.readPassword("Master password: ")
+func runAdd() {
+  master := readPassword("Master password: ")
 
   db := store.Open("test.db", master)
   defer db.Close()
 
-  login := app.readInput("Username: ")
+  login := readInput("Username: ")
 
-  password := app.readPassword("Password (enter to generate): ")
+  password := readPassword("Password (enter to generate): ")
   if len(password) > 0 {
-    confirm := app.readPassword("Password (confirm): ")
+    confirm := readPassword("Password (confirm): ")
 
     if confirm != password {
       panic("Passwords do not match.")
@@ -85,8 +61,8 @@ func (app *App) runAdd() {
     })
   }
 
-  website := app.readInput("Website: ")
-  note := app.readInput("Note: ")
+  website := readInput("Website: ")
+  note := readInput("Note: ")
 
   db.AddCredential(&store.Credential {
     Login: login,
@@ -98,8 +74,8 @@ func (app *App) runAdd() {
   println("Credential added.")
 }
 
-func (app *App) runCopy(query string) {
-  master := app.readPassword("Master password: ")
+func runCopy(query string) {
+  master := readPassword("Master password: ")
 
   db := store.Open("test.db", master)
   defer db.Close()
@@ -110,18 +86,23 @@ func (app *App) runCopy(query string) {
   }
 }
 
-func (app *App) Run(args []string) {
-  switch kingpin.MustParse(app.app.Parse(args[1:])) {
-  case app.init.FullCommand():
-    app.runInit()
-  case app.add.FullCommand():
-    app.runAdd()
-  case app.copy.FullCommand():
-    app.runCopy(*app.query)
+func runApp(args []string) {
+  app := kingpin.New("ward", "Password manager.")
+  init := app.Command("init", "Create a new password database.")
+  add := app.Command("add", "Add a new credential.")
+  copy := app.Command("copy", "Copy password.")
+  query := copy.Arg("query", "Text to match.").Required().String()
+
+  switch kingpin.MustParse(app.Parse(args[1:])) {
+  case init.FullCommand():
+    runInit()
+  case add.FullCommand():
+    runAdd()
+  case copy.FullCommand():
+    runCopy(*query)
   }
 }
 
 func main() {
-  app := NewApp()
-  app.Run(os.Args)
+  runApp(os.Args)
 }
