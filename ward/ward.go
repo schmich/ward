@@ -14,7 +14,7 @@ import (
 type App struct {
   app *kingpin.Application
   init *kingpin.CmdClause
-  new *kingpin.CmdClause
+  add *kingpin.CmdClause
   copy *kingpin.CmdClause
   query *string
 }
@@ -22,14 +22,14 @@ type App struct {
 func NewApp() *App {
   app := kingpin.New("ward", "Password manager.")
   init := app.Command("init", "Create a new password database.")
-  new := app.Command("new", "Add a new credential.")
+  add := app.Command("add", "Add a new credential.")
   copy := app.Command("copy", "Copy password.")
   query := copy.Arg("query", "Text to match.").Required().String()
 
   return &App {
     app: app,
     init: init,
-    new: new,
+    add: add,
     copy: copy,
     query: query,
   }
@@ -60,7 +60,7 @@ func (app *App) readPassword(prompt string) string {
   return string(password)
 }
 
-func (app *App) runNew() {
+func (app *App) runAdd() {
   master := app.readPassword("Master password: ")
 
   db := store.Open("test.db", master)
@@ -114,8 +114,8 @@ func (app *App) Run(args []string) {
   switch kingpin.MustParse(app.app.Parse(args[1:])) {
   case app.init.FullCommand():
     app.runInit()
-  case app.new.FullCommand():
-    app.runNew()
+  case app.add.FullCommand():
+    app.runAdd()
   case app.copy.FullCommand():
     app.runCopy(*app.query)
   }
