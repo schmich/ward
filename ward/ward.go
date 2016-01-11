@@ -6,14 +6,38 @@ import (
   "golang.org/x/crypto/ssh/terminal"
   "gopkg.in/alecthomas/kingpin.v2"
   "github.com/fatih/color"
+  "encoding/json"
   "bufio"
   "fmt"
   "os"
 )
 
-func runInit() {
-  password := readPassword("Master password: ")
-  confirm := readPassword("Master password (confirm): ")
+type App struct {
+  scanner *bufio.Scanner
+}
+
+func NewApp() *App {
+  return &App {
+    scanner: bufio.NewScanner(os.Stdin),
+  }
+}
+
+func (app *App) readInput(prompt string) string {
+  print(color.CyanString(prompt))
+  app.scanner.Scan()
+  return app.scanner.Text()
+}
+
+func (app *App) readPassword(prompt string) string {
+  print(color.CyanString(prompt))
+  password, _ := terminal.ReadPassword(int(os.Stdin.Fd()))
+  println()
+  return string(password)
+}
+
+func (app *App) runInit() {
+  password := app.readPassword("Master password: ")
+  confirm := app.readPassword("Master password (confirm): ")
 
   if password != confirm {
     panic("Passwords do not match.")
@@ -23,30 +47,16 @@ func runInit() {
   defer db.Close()
 }
 
-func readInput(prompt string) string {
-  print(color.CyanString(prompt))
-  input, _ := bufio.NewReader(os.Stdin).ReadString('\n')
-  return input
-}
-
-func readPassword(prompt string) string {
-  print(color.CyanString(prompt))
-  password, _ := terminal.ReadPassword(int(os.Stdin.Fd()))
-  println()
-  return string(password)
-}
-
-func runAdd() {
-  master := readPassword("Master password: ")
-
+func (app *App) runAdd() {
+  master := app.readPassword("Master password: ")
   db := store.Open("test.db", master)
   defer db.Close()
 
-  login := readInput("Username: ")
+  login := app.readInput("Username: ")
 
-  password := readPassword("Password (enter to generate): ")
+  password := app.readPassword("Password (enter to generate): ")
   if len(password) > 0 {
-    confirm := readPassword("Password (confirm): ")
+    confirm := app.readPassword("Password (confirm): ")
 
     if confirm != password {
       panic("Passwords do not match.")
@@ -61,8 +71,8 @@ func runAdd() {
     })
   }
 
-  website := readInput("Website: ")
-  note := readInput("Note: ")
+  website := app.readInput("Website: ")
+  note := app.readInput("Note: ")
 
   db.AddCredential(&store.Credential {
     Login: login,
@@ -74,9 +84,8 @@ func runAdd() {
   println("Credential added.")
 }
 
-func runCopy(query string) {
-  master := readPassword("Master password: ")
-
+func (app *App) runCopy(query string) {
+  master := app.readPassword("Master password: ")
   db := store.Open("test.db", master)
   defer db.Close()
 
@@ -86,23 +95,52 @@ func runCopy(query string) {
   }
 }
 
-func runApp(args []string) {
-  app := kingpin.New("ward", "Password manager.")
-  init := app.Command("init", "Create a new password database.")
-  add := app.Command("add", "Add a new credential.")
-  copy := app.Command("copy", "Copy password.")
-  query := copy.Arg("query", "Text to match.").Required().String()
+func (app *App) runExport(filename string) {
+  master := app.readPassword("Master password: ")
+  db := store.Open("test.db", master)
+  defer db.Close()
 
-  switch kingpin.MustParse(app.Parse(args[1:])) {
+  var output *os.File
+  if filename == "" {
+    output = os.Stdout
+  }
+
+  credentials := db.GetCredentials()
+
+  json, err := json.Marshal(credentials)
+  if err != nil {
+    panic(err)
+  }
+
+  output.Write(json)
+}
+
+func (app *App) Run(args []string) {
+  ward := kingpin.New("ward", "Password manager.")
+
+  init := ward.Command("init", "Create a new password database.")
+
+  add := ward.Command("add", "Add a new credential.")
+
+  copy := ward.Command("copy", "Copy password.")
+  copyQuery := copy.Arg("query", "Text to match.").Required().String()
+
+  export := ward.Command("export", "Export credentials to JSON file.")
+  exportFile := export.Arg("file", "Destination file.").String()
+
+  switch kingpin.MustParse(ward.Parse(args[1:])) {
   case init.FullCommand():
-    runInit()
+    app.runInit()
   case add.FullCommand():
-    runAdd()
+    app.runAdd()
   case copy.FullCommand():
-    runCopy(*query)
+    app.runCopy(*copyQuery)
+  case export.FullCommand():
+    app.runExport(*exportFile)
   }
 }
 
 func main() {
-  runApp(os.Args)
+  app := NewApp()
+  app.Run(os.Args)
 }

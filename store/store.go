@@ -13,10 +13,10 @@ type Store struct {
 }
 
 type Credential struct {
-  Login string
-  Password string
-  Website string
-  Note string
+  Login string `json:"login"`
+  Password string `json:"password"`
+  Website string `json:"website"`
+  Note string `json:"note"`
 }
 
 func Open(filename string, password string) *Store {
@@ -157,27 +157,53 @@ func (store *Store) AddCredential(credential *Credential) {
   })
 }
 
-func (store *Store) FindCredentials(query string) []*Credential {
-  rows, err := store.db.Query("select login, password, website, note from credentials")
-  if err != nil {
-    panic(err)
+func (store *Store) eachCredential() chan *Credential {
+  yield := make(chan *Credential)
+
+  go func() {
+    rows, err := store.db.Query("select login, password, website, note from credentials")
+    if err != nil {
+      panic(err)
+    }
+
+    defer rows.Close()
+
+    for rows.Next() {
+      var cipherLogin, cipherPassword, cipherWebsite, cipherNote []byte
+      rows.Scan(&cipherLogin, &cipherPassword, &cipherWebsite, &cipherNote)
+
+      login := string(store.cipher.Decrypt(cipherLogin))
+      website := string(store.cipher.Decrypt(cipherWebsite))
+      note := string(store.cipher.Decrypt(cipherNote))
+      password := string(store.cipher.Decrypt(cipherPassword))
+
+      credential := &Credential { Login: login, Password: password, Website: website, Note: note }
+
+      yield <- credential
+    }
+
+    close(yield)
+  }()
+
+  return yield
+}
+
+func (store *Store) GetCredentials() []*Credential {
+  credentials := make([]*Credential, 0)
+
+  for credential := range store.eachCredential() {
+    credentials = append(credentials, credential)
   }
 
-  defer rows.Close()
+  return credentials
+}
 
+func (store *Store) FindCredentials(query string) []*Credential {
   matches := make([]*Credential, 0)
 
-  for rows.Next() {
-    var cipherLogin, cipherPassword, cipherWebsite, cipherNote []byte
-    rows.Scan(&cipherLogin, &cipherPassword, &cipherWebsite, &cipherNote)
-
-    login := string(store.cipher.Decrypt(cipherLogin))
-    website := string(store.cipher.Decrypt(cipherWebsite))
-    note := string(store.cipher.Decrypt(cipherNote))
-
-    if strings.Contains(login, query) || strings.Contains(website, query) || strings.Contains(note, query) {
-      password := string(store.cipher.Decrypt(cipherPassword))
-      matches = append(matches, &Credential { Login: login, Password: password, Website: website, Note: note })
+  for credential := range store.eachCredential() {
+    if strings.Contains(credential.Login, query) || strings.Contains(credential.Website, query) || strings.Contains(credential.Note, query) {
+      matches = append(matches, credential)
     }
   }
 
