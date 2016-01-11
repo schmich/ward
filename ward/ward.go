@@ -23,13 +23,13 @@ func NewApp() *App {
 }
 
 func (app *App) readInput(prompt string) string {
-  print(color.CyanString(prompt))
+  fmt.Println(os.Stderr, color.CyanString(prompt))
   app.scanner.Scan()
   return app.scanner.Text()
 }
 
 func (app *App) readPassword(prompt string) string {
-  print(color.CyanString(prompt))
+  fmt.Println(os.Stderr, color.CyanString(prompt))
   password, _ := terminal.ReadPassword(int(os.Stdin.Fd()))
   println()
   return string(password)
@@ -100,9 +100,16 @@ func (app *App) runExport(filename string) {
   db := store.Open("test.db", master)
   defer db.Close()
 
+  var err error
   var output *os.File
+
   if filename == "" {
     output = os.Stdout
+  } else {
+    output, err = os.Create(filename)
+    if err != nil {
+      panic(err)
+    }
   }
 
   credentials := db.GetCredentials()
@@ -113,6 +120,10 @@ func (app *App) runExport(filename string) {
   }
 
   output.Write(json)
+
+  if filename != "" {
+    fmt.Printf("Exported credentials to %s.\n", filename)
+  }
 }
 
 func (app *App) Run(args []string) {
