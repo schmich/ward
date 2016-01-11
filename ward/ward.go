@@ -23,13 +23,13 @@ func NewApp() *App {
 }
 
 func (app *App) readInput(prompt string) string {
-  fmt.Println(os.Stderr, color.CyanString(prompt))
+  fmt.Fprint(os.Stderr, color.CyanString(prompt))
   app.scanner.Scan()
   return app.scanner.Text()
 }
 
 func (app *App) readPassword(prompt string) string {
-  fmt.Println(os.Stderr, color.CyanString(prompt))
+  fmt.Fprint(os.Stderr, color.CyanString(prompt))
   password, _ := terminal.ReadPassword(int(os.Stdin.Fd()))
   println()
   return string(password)
