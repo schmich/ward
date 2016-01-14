@@ -7,6 +7,7 @@ import (
   "github.com/mitchellh/go-homedir"
   "github.com/fatih/color"
   "github.com/jawher/mow.cli"
+  "github.com/atotto/clipboard"
   "encoding/json"
   "path/filepath"
   "bufio"
@@ -93,14 +94,14 @@ func (app *App) runAdd(login, website, note string) {
   println("Credential added.")
 }
 
-func (app *App) runGen(login, website, note string, generator *passgen.Generator) {
+func (app *App) runGen(login, website, note string, copyPassword bool, generator *passgen.Generator) {
   master := app.readPassword("Master password: ")
   db := store.Open(app.fileName, master)
   defer db.Close()
 
-  password := make(chan string)
+  passwordChan := make(chan string)
   go func() {
-    password <- generator.Generate()
+    passwordChan <- generator.Generate()
   }()
 
   if login == "" {
@@ -115,14 +116,23 @@ func (app *App) runGen(login, website, note string, generator *passgen.Generator
     note = app.readInput("Note: ")
   }
 
+  password := <-passwordChan
+
   db.AddCredential(&store.Credential {
     Login: login,
-    Password: <-password,
+    Password: password,
     Website: website,
     Note: note,
   })
 
-  println("Credential added.")
+  print("Credential added. ")
+
+  if copyPassword {
+    clipboard.WriteAll(password)
+    println("Generated password copied to the clipboard.")
+  } else {
+    println()
+  }
 }
 
 func (app *App) runCopy(query string) {
@@ -220,6 +230,8 @@ func (app *App) Run(args []string) {
 
     exclude := cmd.StringOpt("exclude", "", "Exclude specific characters from password.")
 
+    noCopy := cmd.BoolOpt("no-copy", false, "Do not copy generated password to the clipboard.")
+
     cmd.Action = func() {
       generator := passgen.New()
       generator.AddAlphabet("upper", "ABCDEFGHIJKLMNOPQRSTUVWXYZ")
@@ -251,7 +263,7 @@ func (app *App) Run(args []string) {
       if (*noSimilar) {
         generator.Exclude += "B8|1IiLl0Oo"
       }
-      app.runGen(*login, *website, *note, generator)
+      app.runGen(*login, *website, *note, !*noCopy, generator)
     }
   })
 
@@ -264,18 +276,22 @@ func (app *App) Run(args []string) {
   })
 
   ward.Command("edit", "Edit existing credentials.", func(cmd *cli.Cmd) {
+    // TODO
     fmt.Println("edit")
   })
 
   ward.Command("del", "Delete a stored credential.", func(cmd *cli.Cmd) {
+    // TODO
     fmt.Println("del")
   })
 
   ward.Command("show", "Show a stored credential.", func(cmd *cli.Cmd) {
+    // TODO
     fmt.Println("show")
   })
 
   ward.Command("use", "Use an existing credential database.", func(cmd *cli.Cmd) {
+    // TODO
     fmt.Println("use")
   })
 
@@ -291,7 +307,13 @@ func (app *App) Run(args []string) {
   })
 
   ward.Command("import", "Import JSON-formatted credentials.", func(cmd *cli.Cmd) {
+    // TODO
     fmt.Println("import")
+  })
+
+  ward.Command("master", "Update master password.", func(cmd *cli.Cmd) {
+    // TODO
+    fmt.Println("master")
   })
 
   ward.Run(args)
