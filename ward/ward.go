@@ -199,6 +199,7 @@ func (app *App) Run(args []string) {
     website := cmd.StringOpt("website", "", "Website for credential.")
     note := cmd.StringOpt("note", "", "Note for credential.")
 
+    length := cmd.IntOpt("length", 0, "Password length.")
     minLength := cmd.IntOpt("min-length", 30, "Minimum length password.")
     maxLength := cmd.IntOpt("max-length", 40, "Maximum length password.")
 
@@ -226,7 +227,11 @@ func (app *App) Run(args []string) {
       generator.AddAlphabet("digit", "0123456789")
       generator.AddAlphabet("symbol", "`~!@#$%^&*()-_=+[{]}\\|;:'\",<.>/?")
       generator.Exclude = *exclude
-      generator.SetLength(*minLength, *maxLength)
+      if *length == 0 {
+        generator.SetLength(*minLength, *maxLength)
+      } else {
+        generator.SetLength(*length, *length)
+      }
       generator.SetMinMax("upper", *minUpper, *maxUpper)
       generator.SetMinMax("lower", *minLower, *maxLower)
       generator.SetMinMax("digit", *minNumeric, *maxNumeric)
