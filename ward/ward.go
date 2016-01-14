@@ -4,9 +4,10 @@ import (
   "github.com/schmich/ward/store"
   "github.com/schmich/ward/passgen"
   "golang.org/x/crypto/ssh/terminal"
-  "gopkg.in/alecthomas/kingpin.v2"
   "github.com/fatih/color"
+  "github.com/jawher/mow.cli"
   "encoding/json"
+  "path/filepath"
   "bufio"
   "fmt"
   "os"
@@ -43,40 +44,75 @@ func (app *App) runInit() {
     panic("Passwords do not match.")
   }
 
-  db := store.Create("test.db", password)
+  filename := "test.db"
+
+  db := store.Create(filename, password)
   defer db.Close()
+
+  fullPath, _ := filepath.Abs(filename)
+  fmt.Printf("Credential database created at %s.\n", fullPath)
 }
 
-func (app *App) runAdd() {
+func (app *App) runAdd(login, website, note string) {
   master := app.readPassword("Master password: ")
   db := store.Open("test.db", master)
   defer db.Close()
 
-  login := app.readInput("Username: ")
-
-  password := app.readPassword("Password (enter to generate): ")
-  if len(password) > 0 {
-    confirm := app.readPassword("Password (confirm): ")
-
-    if confirm != password {
-      panic("Passwords do not match.")
-    }
-  } else {
-    password = passgen.NewPassword(&passgen.Options {
-      Length: 30,
-      Upper: true,
-      Lower: true,
-      Number: true,
-      Symbol: true,
-    })
+  if login == "" {
+    login = app.readInput("Login: ")
   }
 
-  website := app.readInput("Website: ")
-  note := app.readInput("Note: ")
+  password := app.readPassword("Password: ")
+  confirm := app.readPassword("Password (confirm): ")
+
+  if confirm != password {
+    // Loop.
+    panic("Passwords do not match.")
+  }
+
+  if website == "" {
+    website = app.readInput("Website: ")
+  }
+
+  if note == "" {
+    note = app.readInput("Note: ")
+  }
 
   db.AddCredential(&store.Credential {
     Login: login,
-    Password: string(password),
+    Password: password,
+    Website: website,
+    Note: note,
+  })
+
+  println("Credential added.")
+}
+
+func (app *App) runGen(login, website, note string, generator *passgen.Generator) {
+  master := app.readPassword("Master password: ")
+  db := store.Open("test.db", master)
+  defer db.Close()
+
+  password := make(chan string)
+  go func() {
+    password <- generator.Generate()
+  }()
+
+  if login == "" {
+    login = app.readInput("Login: ")
+  }
+
+  if website == "" {
+    website = app.readInput("Website: ")
+  }
+
+  if note == "" {
+    note = app.readInput("Note: ")
+  }
+
+  db.AddCredential(&store.Credential {
+    Login: login,
+    Password: <-password,
     Website: website,
     Note: note,
   })
@@ -95,7 +131,7 @@ func (app *App) runCopy(query string) {
   }
 }
 
-func (app *App) runExport(filename string) {
+func (app *App) runExport(filename string, indent bool) {
   master := app.readPassword("Master password: ")
   db := store.Open("test.db", master)
   defer db.Close()
@@ -114,12 +150,18 @@ func (app *App) runExport(filename string) {
 
   credentials := db.GetCredentials()
 
-  json, err := json.Marshal(credentials)
+  var jsonData []byte
+  if indent {
+    jsonData, err = json.MarshalIndent(credentials, "", "  ")
+  } else {
+    jsonData, err = json.Marshal(credentials)
+  }
+
   if err != nil {
     panic(err)
   }
 
-  output.Write(json)
+  output.Write(jsonData)
 
   if filename != "" {
     fmt.Printf("Exported credentials to %s.\n", filename)
@@ -127,28 +169,122 @@ func (app *App) runExport(filename string) {
 }
 
 func (app *App) Run(args []string) {
-  ward := kingpin.New("ward", "Password manager.")
+  ward := cli.App("ward", "Secure password manager - https://github.com/schmich/ward")
 
-  init := ward.Command("init", "Create a new password database.")
+  ward.Version("v version", "ward 0.0.1")
 
-  add := ward.Command("add", "Add a new credential.")
+  ward.Command("init", "Create a new credential database.", func(cmd *cli.Cmd) {
+    cmd.Action = func() {
+      app.runInit()
+    }
+  })
 
-  copy := ward.Command("copy", "Copy password.")
-  copyQuery := copy.Arg("query", "Text to match.").Required().String()
+  ward.Command("add", "Add a credential with a known password.", func(cmd *cli.Cmd) {
+    login := cmd.StringOpt("login", "", "Login for credential, e.g. username or email.")
+    website := cmd.StringOpt("website", "", "Website for credential.")
+    note := cmd.StringOpt("note", "", "Note for credential.")
 
-  export := ward.Command("export", "Export credentials to JSON file.")
-  exportFile := export.Arg("file", "Destination file.").String()
+    cmd.Action = func() {
+      app.runAdd(*login, *website, *note)
+    }
+  })
 
-  switch kingpin.MustParse(ward.Parse(args[1:])) {
-  case init.FullCommand():
-    app.runInit()
-  case add.FullCommand():
-    app.runAdd()
-  case copy.FullCommand():
-    app.runCopy(*copyQuery)
-  case export.FullCommand():
-    app.runExport(*exportFile)
-  }
+  ward.Command("gen", "Add a credential with a generated password.", func(cmd *cli.Cmd) {
+    login := cmd.StringOpt("login", "", "Login for credential, e.g. username or email.")
+    website := cmd.StringOpt("website", "", "Website for credential.")
+    note := cmd.StringOpt("note", "", "Note for credential.")
+
+    minLength := cmd.IntOpt("min-length", 30, "Minimum length password.")
+    maxLength := cmd.IntOpt("max-length", 40, "Maximum length password.")
+
+    noUpper := cmd.BoolOpt("no-upper", false, "Exclude uppercase characters in password.")
+    noLower := cmd.BoolOpt("no-lower", false, "Exclude lowercase characters in password.")
+    noNumeric := cmd.BoolOpt("no-numeric", false, "Exclude numeric characters in password.")
+    noSymbol := cmd.BoolOpt("no-symbol", false, "Exclude symbol characters in password.")
+    noSimilar := cmd.BoolOpt("no-similar", false, "Exclude similar characters in password.")
+
+    minUpper := cmd.IntOpt("min-upper", 0, "Minimum number of uppercase characters in password.")
+    maxUpper := cmd.IntOpt("max-upper", -1, "Maximum number of uppercase characters in password.")
+    minLower := cmd.IntOpt("min-lower", 0, "Minimum number of lowercase characters in password.")
+    maxLower := cmd.IntOpt("max-lower", -1, "Maximum number of lowercase characters in password.")
+    minNumeric := cmd.IntOpt("min-numeric", 0, "Minimum number of numeric characters in password.")
+    maxNumeric := cmd.IntOpt("max-numeric", -1, "Maximum number of numeric characters in password.")
+    minSymbol := cmd.IntOpt("min-symbol", 0, "Minimum number of symbol characters in password.")
+    maxSymbol := cmd.IntOpt("max-symbol", -1, "Maximum number of symbol characters in password.")
+
+    exclude := cmd.StringOpt("exclude", "", "Exclude specific characters from password.")
+
+    cmd.Action = func() {
+      generator := passgen.New()
+      generator.AddAlphabet("upper", "ABCDEFGHIJKLMNOPQRSTUVWXYZ")
+      generator.AddAlphabet("lower", "abcdefghijklmnopqrstuvwxyz")
+      generator.AddAlphabet("digit", "0123456789")
+      generator.AddAlphabet("symbol", "`~!@#$%^&*()-_=+[{]}\\|;:'\",<.>/?")
+      generator.Exclude = *exclude
+      generator.SetLength(*minLength, *maxLength)
+      generator.SetMinMax("upper", *minUpper, *maxUpper)
+      generator.SetMinMax("lower", *minLower, *maxLower)
+      generator.SetMinMax("digit", *minNumeric, *maxNumeric)
+      generator.SetMinMax("symbol", *minSymbol, *maxSymbol)
+      if (*noUpper) {
+        generator.SetMinMax("upper", 0, 0)
+      }
+      if (*noLower) {
+        generator.SetMinMax("lower", 0, 0)
+      }
+      if (*noNumeric) {
+        generator.SetMinMax("digit", 0, 0)
+      }
+      if (*noSymbol) {
+        generator.SetMinMax("symbol", 0, 0)
+      }
+      if (*noSimilar) {
+        generator.Exclude += "B8|1IiLl0Oo"
+      }
+      app.runGen(*login, *website, *note, generator)
+    }
+  })
+
+  ward.Command("copy", "Copy a password to the clipboard.", func(cmd *cli.Cmd) {
+    query := cmd.StringArg("QUERY", "", "Criteria to match.")
+
+    cmd.Action = func() {
+      app.runCopy(*query)
+    }
+  })
+
+  ward.Command("edit", "Edit existing credentials.", func(cmd *cli.Cmd) {
+    fmt.Println("edit")
+  })
+
+  ward.Command("del", "Delete a stored credential.", func(cmd *cli.Cmd) {
+    fmt.Println("del")
+  })
+
+  ward.Command("show", "Show a stored credential.", func(cmd *cli.Cmd) {
+    fmt.Println("show")
+  })
+
+  ward.Command("use", "Use an existing credential database.", func(cmd *cli.Cmd) {
+    fmt.Println("use")
+  })
+
+  ward.Command("export", "Export JSON-formatted credentials.", func(cmd *cli.Cmd) {
+    cmd.Spec = "[--indent] [FILE]"
+
+    file := cmd.StringArg("FILE", "", "Destination file. Otherwise, output written to stdout.")
+    indent := cmd.BoolOpt("indent", false, "Indent JSON output.")
+
+    cmd.Action = func() {
+      app.runExport(*file, *indent)
+    }
+  })
+
+  ward.Command("import", "Import JSON-formatted credentials.", func(cmd *cli.Cmd) {
+    fmt.Println("import")
+  })
+
+  ward.Run(args)
 }
 
 func main() {
