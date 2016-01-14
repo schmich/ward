@@ -4,6 +4,7 @@ import (
   "github.com/schmich/ward/store"
   "github.com/schmich/ward/passgen"
   "golang.org/x/crypto/ssh/terminal"
+  "github.com/mitchellh/go-homedir"
   "github.com/fatih/color"
   "github.com/jawher/mow.cli"
   "encoding/json"
@@ -15,11 +16,15 @@ import (
 
 type App struct {
   scanner *bufio.Scanner
+  fileName string
 }
 
-func NewApp() *App {
+func NewApp(fileName string) *App {
+  fullPath, _ := filepath.Abs(fileName)
+
   return &App {
     scanner: bufio.NewScanner(os.Stdin),
+    fileName: fullPath,
   }
 }
 
@@ -40,22 +45,22 @@ func (app *App) runInit() {
   password := app.readPassword("Master password: ")
   confirm := app.readPassword("Master password (confirm): ")
 
+  // TODO: Loop if mismatch.
   if password != confirm {
     panic("Passwords do not match.")
   }
 
-  filename := "test.db"
+  // TODO: Check if file exists.
 
-  db := store.Create(filename, password)
+  db := store.Create(app.fileName, password)
   defer db.Close()
 
-  fullPath, _ := filepath.Abs(filename)
-  fmt.Printf("Credential database created at %s.\n", fullPath)
+  fmt.Printf("Credential database created at %s.\n", app.fileName)
 }
 
 func (app *App) runAdd(login, website, note string) {
   master := app.readPassword("Master password: ")
-  db := store.Open("test.db", master)
+  db := store.Open(app.fileName, master)
   defer db.Close()
 
   if login == "" {
@@ -90,7 +95,7 @@ func (app *App) runAdd(login, website, note string) {
 
 func (app *App) runGen(login, website, note string, generator *passgen.Generator) {
   master := app.readPassword("Master password: ")
-  db := store.Open("test.db", master)
+  db := store.Open(app.fileName, master)
   defer db.Close()
 
   password := make(chan string)
@@ -122,7 +127,7 @@ func (app *App) runGen(login, website, note string, generator *passgen.Generator
 
 func (app *App) runCopy(query string) {
   master := app.readPassword("Master password: ")
-  db := store.Open("test.db", master)
+  db := store.Open(app.fileName, master)
   defer db.Close()
 
   credentials := db.FindCredentials(query)
@@ -133,7 +138,7 @@ func (app *App) runCopy(query string) {
 
 func (app *App) runExport(filename string, indent bool) {
   master := app.readPassword("Master password: ")
-  db := store.Open("test.db", master)
+  db := store.Open(app.fileName, master)
   defer db.Close()
 
   var err error
@@ -288,6 +293,9 @@ func (app *App) Run(args []string) {
 }
 
 func main() {
-  app := NewApp()
+  homeDir, _ := homedir.Dir()
+  dbPath := filepath.Join(homeDir, ".ward")
+
+  app := NewApp(dbPath)
   app.Run(os.Args)
 }
