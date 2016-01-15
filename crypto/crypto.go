@@ -106,23 +106,20 @@ func (cipher *Cipher) Decrypt(ciphertext []byte) []byte {
   return plaintext
 }
 
-// TODO: should use http://tools.ietf.org/html/rfc5652#section-6.3
-// See https://tools.ietf.org/html/rfc5246#section-6.2.3.2
 func pad(buffer []byte) []byte {
-  totalLength := len(buffer) + 1
-  padLength := aes.BlockSize - (totalLength % aes.BlockSize)
+  // See http://tools.ietf.org/html/rfc5652#section-6.3
+  padLength := aes.BlockSize - (len(buffer) % aes.BlockSize)
 
-  padBuffer := make([]byte, padLength + 1)
-  for i := 0; i < len(padBuffer); i++ {
+  padBuffer := make([]byte, padLength)
+  for i := 0; i < padLength; i++ {
     padBuffer[i] = byte(padLength)
   }
 
   return append(buffer, padBuffer...)
 }
 
-// TODO: should use http://tools.ietf.org/html/rfc5652#section-6.3
-// See https://tools.ietf.org/html/rfc5246#section-6.2.3.2
 func depad(buffer []byte) []byte {
+  // See http://tools.ietf.org/html/rfc5652#section-6.3
   padLength := int(buffer[len(buffer) - 1])
-  return buffer[:len(buffer) - padLength - 1]
+  return buffer[:len(buffer) - padLength]
 }
