@@ -44,17 +44,23 @@ func (app *App) readPassword(prompt string) string {
   return string(password)
 }
 
-func (app *App) runInit() {
-  password := app.readPassword("Master password: ")
-  confirm := app.readPassword("Master password (confirm): ")
+func (app *App) readPasswordConfirm(prompt string) string {
+  for {
+    password := app.readPassword(prompt + ": ")
+    confirm := app.readPassword(prompt + " (confirm): ")
 
-  // TODO: Loop if mismatch.
-  if password != confirm {
-    panic("Passwords do not match.")
+    if password != confirm {
+      fmt.Println("Passwords do not match.")
+    } else {
+      return password
+    }
   }
+}
+
+func (app *App) runInit() {
+  password := app.readPasswordConfirm("Master password")
 
   // TODO: Check if file exists.
-
   db := store.Create(app.fileName, password)
   defer db.Close()
 
@@ -70,13 +76,7 @@ func (app *App) runAdd(login, website, note string) {
     login = app.readInput("Login: ")
   }
 
-  password := app.readPassword("Password: ")
-  confirm := app.readPassword("Password (confirm): ")
-
-  if confirm != password {
-    // Loop.
-    panic("Passwords do not match.")
-  }
+  password := app.readPasswordConfirm("Password")
 
   if website == "" {
     website = app.readInput("Website: ")
