@@ -11,6 +11,8 @@ import (
   "encoding/json"
   "path/filepath"
   "bufio"
+  "strings"
+  "strconv"
   "fmt"
   "os"
 )
@@ -135,15 +137,61 @@ func (app *App) runGen(login, website, note string, copyPassword bool, generator
   }
 }
 
+func filter(arr []string, pred func(string) bool) []string {
+  result := make([]string, 0)
+  for _, str := range arr {
+    if pred(str) {
+      result = append(result, str)
+    }
+  }
+
+  return result
+}
+
+func (app *App) readIndex(low, high int, prompt string) int {
+  for {
+    input := app.readInput(prompt)
+    index, err := strconv.Atoi(input)
+    if (err != nil) || (index < low) || (index > high) {
+      fmt.Println("Invalid choice.")
+    } else {
+      return index
+    }
+  }
+}
+
+func (app *App) selectCredential(credentials []*store.Credential) *store.Credential {
+  for i, credential := range credentials {
+    parts := []string { credential.Login, credential.Website, credential.Note }
+    parts = filter(parts, func(s string) bool { return s != "" })
+    fmt.Printf("%d. %s\n", i + 1, strings.Join(parts, ", "))
+  }
+
+  index := app.readIndex(1, len(credentials), "> ")
+  return credentials[index - 1]
+}
+
 func (app *App) runCopy(query string) {
   master := app.readPassword("Master password: ")
   db := store.Open(app.fileName, master)
   defer db.Close()
 
+  var credential *store.Credential
   credentials := db.FindCredentials(query)
-  for _, credential := range credentials {
-    fmt.Println(credential)
+
+  if len(credentials) == 0 {
+    fmt.Printf("No credentials match the query \"%s\".\n", query)
+    return
+  } else if len(credentials) == 1 {
+    credential = credentials[0]
+  } else {
+    fmt.Printf("Found multiple credentials matching \"%s\":\n", query)
+    credential = app.selectCredential(credentials)
   }
+
+  clipboard.WriteAll(credential.Password)
+
+  fmt.Println("Password copied to the clipboard.")
 }
 
 func (app *App) runExport(filename string, indent bool) {
