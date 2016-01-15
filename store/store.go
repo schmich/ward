@@ -3,8 +3,10 @@ package store
 import (
   "github.com/schmich/ward/crypto"
   _ "github.com/mattn/go-sqlite3"
+  "crypto/rand"
   "database/sql"
   "strings"
+  "errors"
 )
 
 type Store struct {
@@ -19,18 +21,16 @@ type Credential struct {
   Note string `json:"note"`
 }
 
-func Open(filename string, password string) *Store {
+func Open(filename string, password string) (*Store, error) {
   db, err := sql.Open("sqlite3", filename)
-
   if err != nil {
-    panic(err)
+    return nil, err
   }
 
-  query := "select salt, stretch, nonce, version from settings"
+  query := "select salt, stretch, nonce, sentinel, version from settings"
   rows, err := db.Query(query)
-
   if err != nil {
-    panic(err)
+    return nil, err
   }
 
   defer rows.Close()
@@ -40,31 +40,41 @@ func Open(filename string, password string) *Store {
   var salt []byte
   var stretch int
   var nonce []byte
+  var sentinel []byte
   var version int
-  rows.Scan(&salt, &stretch, &nonce, &version)
+  rows.Scan(&salt, &stretch, &nonce, &sentinel, &version)
 
   if version != 1 {
-    panic("Invalid version.")
+    return nil, errors.New("Invalid version.")
   }
 
   if stretch < 1 {
-    panic("Invalid stretch.")
+    return nil, errors.New("Invalid key stretch.")
   }
 
   if len(salt) < 64 {
-    panic("Invalid salt.")
+    return nil, errors.New("Invalid salt.")
   }
 
   if len(nonce) < 12 {
-    panic("Invalid nonce.")
+    return nil, errors.New("Invalid nonce.")
+  }
+
+  if len(sentinel) <= 0 {
+    return nil, errors.New("Invalid sentinel.")
   }
 
   cipher := crypto.LoadCipher(password, salt, stretch, nonce)
 
+  _, err = cipher.TryDecrypt(sentinel)
+  if err != nil {
+    return nil, err
+  }
+
   return &Store {
     db: db,
     cipher: cipher,
-  }
+  }, nil
 }
 
 func Create(filename string, password string) *Store {
@@ -87,6 +97,7 @@ func Create(filename string, password string) *Store {
     salt blob,
     stretch integer,
     nonce blob,
+    sentinel blob,
     version integer
   );
 	`
@@ -101,14 +112,25 @@ func Create(filename string, password string) *Store {
 
   cipher := crypto.NewCipher(password, stretch)
 
-  insert, err := db.Prepare("insert into settings (salt, stretch, nonce, version) values (?, ?, ?, ?)")
+  insert, err := db.Prepare("insert into settings (salt, stretch, nonce, sentinel, version) values (?, ?, ?, ?, ?)")
   if err != nil {
     panic(err)
   }
 
   defer insert.Close()
 
-  insert.Exec(cipher.GetSalt(), stretch, cipher.GetNonce(), version)
+  sentinel := make([]byte, 16)
+  _, err = rand.Read(sentinel)
+  if err != nil {
+    panic(err)
+  }
+
+  insert.Exec(
+    cipher.GetSalt(),
+    stretch,
+    cipher.GetNonce(),
+    cipher.Encrypt(sentinel),
+    version)
 
   return &Store {
     db: db,

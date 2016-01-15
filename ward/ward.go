@@ -2,6 +2,7 @@ package main
 
 import (
   "github.com/schmich/ward/store"
+  "github.com/schmich/ward/crypto"
   "github.com/schmich/ward/passgen"
   "golang.org/x/crypto/ssh/terminal"
   "github.com/mitchellh/go-homedir"
@@ -58,6 +59,7 @@ func (app *App) readPasswordConfirm(prompt string) string {
 }
 
 func (app *App) runInit() {
+  fmt.Println("Creating new credential database.")
   password := app.readPasswordConfirm("Master password")
 
   // TODO: Check if file exists.
@@ -67,9 +69,24 @@ func (app *App) runInit() {
   fmt.Printf("Credential database created at %s.\n", app.fileName)
 }
 
+func (app *App) openStore() *store.Store {
+  for {
+    master := app.readPassword("Master password: ")
+    db, err := store.Open(app.fileName, master)
+    if err == nil {
+      return db
+    }
+
+    if _, ok := err.(crypto.IncorrectPasswordError); ok {
+      fmt.Println(err)
+    } else {
+      panic(err)
+    }
+  }
+}
+
 func (app *App) runAdd(login, website, note string) {
-  master := app.readPassword("Master password: ")
-  db := store.Open(app.fileName, master)
+  db := app.openStore()
   defer db.Close()
 
   if login == "" {
@@ -97,8 +114,7 @@ func (app *App) runAdd(login, website, note string) {
 }
 
 func (app *App) runGen(login, website, note string, copyPassword bool, generator *passgen.Generator) {
-  master := app.readPassword("Master password: ")
-  db := store.Open(app.fileName, master)
+  db := app.openStore()
   defer db.Close()
 
   passwordChan := make(chan string)
@@ -172,8 +188,7 @@ func (app *App) selectCredential(credentials []*store.Credential) *store.Credent
 }
 
 func (app *App) runCopy(query string) {
-  master := app.readPassword("Master password: ")
-  db := store.Open(app.fileName, master)
+  db := app.openStore()
   defer db.Close()
 
   var credential *store.Credential
@@ -195,8 +210,7 @@ func (app *App) runCopy(query string) {
 }
 
 func (app *App) runExport(filename string, indent bool) {
-  master := app.readPassword("Master password: ")
-  db := store.Open(app.fileName, master)
+  db := app.openStore()
   defer db.Close()
 
   var err error

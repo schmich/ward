@@ -9,6 +9,12 @@ import (
   "math/big"
 )
 
+type IncorrectPasswordError string
+
+func (s IncorrectPasswordError) Error() string {
+  return "Incorrect password."
+}
+
 type Cipher struct {
   aead gocipher.AEAD
   nonce *big.Int
@@ -80,7 +86,7 @@ func (cipher *Cipher) Encrypt(plaintext []byte) []byte {
   return append(ciphertext, nonce...)
 }
 
-func (cipher *Cipher) Decrypt(ciphertext []byte) []byte {
+func (cipher *Cipher) TryDecrypt(ciphertext []byte) ([]byte, error) {
   nonceStart := len(ciphertext) - cipher.aead.NonceSize()
   nonce := ciphertext[nonceStart:]
   ciphertext = ciphertext[:nonceStart]
@@ -88,10 +94,16 @@ func (cipher *Cipher) Decrypt(ciphertext []byte) []byte {
   plaintext := make([]byte, 0)
   plaintext, err := cipher.aead.Open(plaintext, nonce, ciphertext, []byte{})
   if err != nil {
-    panic(err)
+    var e IncorrectPasswordError
+    return []byte{}, e
   }
 
-  return depad(plaintext)
+  return depad(plaintext), nil
+}
+
+func (cipher *Cipher) Decrypt(ciphertext []byte) []byte {
+  plaintext, _ := cipher.TryDecrypt(ciphertext)
+  return plaintext
 }
 
 // TODO: should use http://tools.ietf.org/html/rfc5652#section-6.3
