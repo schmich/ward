@@ -187,26 +187,39 @@ func (app *App) selectCredential(credentials []*store.Credential) *store.Credent
   return credentials[index - 1]
 }
 
+func (app *App) findCredential(db *store.Store, query string) *store.Credential {
+  credentials := db.FindCredentials(query)
+  if len(credentials) == 0 {
+    fmt.Printf("No credentials match the query \"%s\".\n", query)
+    return nil
+  } else if len(credentials) == 1 {
+    return credentials[0]
+  } else {
+    fmt.Printf("Found multiple credentials matching \"%s\":\n", query)
+    return app.selectCredential(credentials)
+  }
+}
+
 func (app *App) runCopy(query string) {
   db := app.openStore()
   defer db.Close()
 
-  var credential *store.Credential
-  credentials := db.FindCredentials(query)
-
-  if len(credentials) == 0 {
-    fmt.Printf("No credentials match the query \"%s\".\n", query)
-    return
-  } else if len(credentials) == 1 {
-    credential = credentials[0]
-  } else {
-    fmt.Printf("Found multiple credentials matching \"%s\":\n", query)
-    credential = app.selectCredential(credentials)
+  credential := app.findCredential(db, query)
+  if credential != nil {
+    clipboard.WriteAll(credential.Password)
+    fmt.Println("Password copied to the clipboard.")
   }
+}
 
-  clipboard.WriteAll(credential.Password)
+func (app *App) runDel(query string) {
+  db := app.openStore()
+  defer db.Close()
 
-  fmt.Println("Password copied to the clipboard.")
+  credential := app.findCredential(db, query)
+  if credential != nil {
+    db.DeleteCredential(credential)
+    fmt.Println("Credential deleted.")
+  }
 }
 
 func (app *App) runExport(filename string, indent bool) {
@@ -251,9 +264,7 @@ func (app *App) Run(args []string) {
   ward.Version("v version", "ward 0.0.1")
 
   ward.Command("init", "Create a new credential database.", func(cmd *cli.Cmd) {
-    cmd.Action = func() {
-      app.runInit()
-    }
+    cmd.Action = app.runInit
   })
 
   ward.Command("add", "Add a credential with a known password.", func(cmd *cli.Cmd) {
@@ -343,8 +354,11 @@ func (app *App) Run(args []string) {
   })
 
   ward.Command("del", "Delete a stored credential.", func(cmd *cli.Cmd) {
-    // TODO
-    fmt.Println("del")
+    query := cmd.StringArg("QUERY", "", "Criteria to match.")
+
+    cmd.Action = func() {
+      app.runDel(*query)
+    }
   })
 
   ward.Command("show", "Show a stored credential.", func(cmd *cli.Cmd) {

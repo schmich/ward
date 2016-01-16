@@ -15,6 +15,7 @@ type Store struct {
 }
 
 type Credential struct {
+  id int
   Login string `json:"login"`
   Password string `json:"password"`
   Website string `json:"website"`
@@ -183,7 +184,7 @@ func (store *Store) eachCredential() chan *Credential {
   yield := make(chan *Credential)
 
   go func() {
-    rows, err := store.db.Query("select login, password, website, note from credentials")
+    rows, err := store.db.Query("select id, login, password, website, note from credentials")
     if err != nil {
       panic(err)
     }
@@ -191,15 +192,17 @@ func (store *Store) eachCredential() chan *Credential {
     defer rows.Close()
 
     for rows.Next() {
+      var id int
       var cipherLogin, cipherPassword, cipherWebsite, cipherNote []byte
-      rows.Scan(&cipherLogin, &cipherPassword, &cipherWebsite, &cipherNote)
+      rows.Scan(&id, &cipherLogin, &cipherPassword, &cipherWebsite, &cipherNote)
 
-      login := string(store.cipher.Decrypt(cipherLogin))
-      website := string(store.cipher.Decrypt(cipherWebsite))
-      note := string(store.cipher.Decrypt(cipherNote))
-      password := string(store.cipher.Decrypt(cipherPassword))
-
-      credential := &Credential { Login: login, Password: password, Website: website, Note: note }
+      credential := &Credential {
+        id: id,
+        Login: string(store.cipher.Decrypt(cipherLogin)),
+        Password: string(store.cipher.Decrypt(cipherPassword)),
+        Website: string(store.cipher.Decrypt(cipherWebsite)),
+        Note: string(store.cipher.Decrypt(cipherNote)),
+      }
 
       yield <- credential
     }
@@ -230,6 +233,23 @@ func (store *Store) FindCredentials(query string) []*Credential {
   }
 
   return matches
+}
+
+func (store *Store) DeleteCredential(credential *Credential) {
+  if credential.id == 0 {
+    panic("Invalid credential ID.")
+  }
+
+  store.update(func(tx *sql.Tx) {
+    delete, err := tx.Prepare("delete from credentials where id=?")
+    if err != nil {
+      panic(err)
+    }
+
+    defer delete.Close()
+
+    delete.Exec(credential.id)
+  })
 }
 
 func (store *Store) Close() {
