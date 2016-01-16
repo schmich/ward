@@ -235,6 +235,29 @@ func (store *Store) FindCredentials(query string) []*Credential {
   return matches
 }
 
+func (store *Store) UpdateCredential(credential *Credential) {
+  if credential.id == 0 {
+    panic("Invalid credential ID.")
+  }
+
+  store.update(func(tx *sql.Tx) {
+    update, err := tx.Prepare("update credentials set login=?, password=?, website=?, note=? where id=?")
+    if err != nil {
+      panic(err)
+    }
+
+    defer update.Close()
+
+    update.Exec(
+      store.cipher.Encrypt([]byte(credential.Login)),
+      store.cipher.Encrypt([]byte(credential.Password)),
+      store.cipher.Encrypt([]byte(credential.Website)),
+      store.cipher.Encrypt([]byte(credential.Note)),
+      credential.id,
+    )
+  })
+}
+
 func (store *Store) DeleteCredential(credential *Credential) {
   if credential.id == 0 {
     panic("Invalid credential ID.")

@@ -117,6 +117,7 @@ func (app *App) runGen(login, website, note string, copyPassword bool, generator
   db := app.openStore()
   defer db.Close()
 
+  // TODO: Handle password generation error.
   passwordChan := make(chan string)
   go func() {
     passwordChan <- generator.Generate()
@@ -205,10 +206,46 @@ func (app *App) runCopy(query string) {
   defer db.Close()
 
   credential := app.findCredential(db, query)
-  if credential != nil {
-    clipboard.WriteAll(credential.Password)
-    fmt.Println("Password copied to the clipboard.")
+  if credential == nil {
+    return
   }
+
+  clipboard.WriteAll(credential.Password)
+  fmt.Println("Password copied to the clipboard.")
+}
+
+func (app *App) runEdit(query string) {
+  db := app.openStore()
+  defer db.Close()
+
+  credential := app.findCredential(db, query)
+  if credential == nil {
+    return
+  }
+
+  fmt.Printf("Login: %s\n", credential.Login)
+  fmt.Printf("Password: %s\n", credential.Password)
+  fmt.Printf("Website: %s\n", credential.Website)
+  fmt.Printf("Note: %s\n", credential.Note)
+
+  if login := app.readInput("Login (blank to keep current): "); login != "" {
+    credential.Login = login
+  }
+
+  if password := app.readInput("Password (blank to keep current): "); password != "" {
+    credential.Password = password
+  }
+
+  if website := app.readInput("Website (blank to keep current): "); website != "" {
+    credential.Website = website
+  }
+
+  if note := app.readInput("Note (blank to keep current): "); note != "" {
+    credential.Note = note
+  }
+
+  db.UpdateCredential(credential)
+  fmt.Println("Credential updated.")
 }
 
 func (app *App) runDel(query string) {
@@ -216,10 +253,12 @@ func (app *App) runDel(query string) {
   defer db.Close()
 
   credential := app.findCredential(db, query)
-  if credential != nil {
-    db.DeleteCredential(credential)
-    fmt.Println("Credential deleted.")
+  if credential == nil {
+    return
   }
+
+  db.DeleteCredential(credential)
+  fmt.Println("Credential deleted.")
 }
 
 func (app *App) runExport(filename string, indent bool) {
@@ -313,7 +352,6 @@ func (app *App) Run(args []string) {
       generator.AddAlphabet("lower", "abcdefghijklmnopqrstuvwxyz")
       generator.AddAlphabet("digit", "0123456789")
       generator.AddAlphabet("symbol", "`~!@#$%^&*()-_=+[{]}\\|;:'\",<.>/?")
-      generator.Exclude = *exclude
       if *length == 0 {
         generator.SetLength(*minLength, *maxLength)
       } else {
@@ -335,6 +373,7 @@ func (app *App) Run(args []string) {
       if (*noSymbol) {
         generator.SetMinMax("symbol", 0, 0)
       }
+      generator.Exclude = *exclude
       if (*noSimilar) {
         generator.Exclude += "B8|1IiLl0Oo"
       }
@@ -351,8 +390,11 @@ func (app *App) Run(args []string) {
   })
 
   ward.Command("edit", "Edit existing credentials.", func(cmd *cli.Cmd) {
-    // TODO
-    fmt.Println("edit")
+    query := cmd.StringArg("QUERY", "", "Criteria to match.")
+
+    cmd.Action = func() {
+      app.runEdit(*query)
+    }
   })
 
   ward.Command("del", "Delete a stored credential.", func(cmd *cli.Cmd) {
@@ -399,8 +441,8 @@ func (app *App) Run(args []string) {
 
 func main() {
   homeDir, _ := homedir.Dir()
-  dbPath := filepath.Join(homeDir, ".ward")
+  wardPath := filepath.Join(homeDir, ".ward")
 
-  app := NewApp(dbPath)
+  app := NewApp(wardPath)
   app.Run(os.Args)
 }
