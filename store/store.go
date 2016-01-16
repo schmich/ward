@@ -28,7 +28,7 @@ func Open(filename string, password string) (*Store, error) {
     return nil, err
   }
 
-  query := "select salt, stretch, nonce, sentinel, version from settings"
+  query := "SELECT salt, stretch, nonce, sentinel, version FROM settings"
   rows, err := db.Query(query)
   if err != nil {
     return nil, err
@@ -86,21 +86,21 @@ func Create(filename string, password string) *Store {
   }
 
   create := `
-	create table credentials (
-    id integer not null primary key,
-    login blob,
-    password blob,
-    website blob,
-    note blob
-  );
+    CREATE TABLE credentials (
+      id INTEGER NOT NULL PRIMARY KEY,
+      login BLOB,
+      password BLOB,
+      website BLOB,
+      note BLOB
+    );
 
-  create table settings (
-    salt blob,
-    stretch integer,
-    nonce blob,
-    sentinel blob,
-    version integer
-  );
+    CREATE TABLE settings (
+      salt BLOB,
+      stretch INTEGER,
+      nonce BLOB,
+      sentinel BLOB,
+      version INTEGER
+    );
 	`
 
   _, err = db.Exec(create)
@@ -113,7 +113,11 @@ func Create(filename string, password string) *Store {
 
   cipher := crypto.NewCipher(password, stretch)
 
-  insert, err := db.Prepare("insert into settings (salt, stretch, nonce, sentinel, version) values (?, ?, ?, ?, ?)")
+  insert, err := db.Prepare(`
+    INSERT INTO settings (salt, stretch, nonce, sentinel, version)
+    VALUES (?, ?, ?, ?, ?)
+  `)
+
   if err != nil {
     panic(err)
   }
@@ -140,7 +144,7 @@ func Create(filename string, password string) *Store {
 }
 
 func (store *Store) updateNonce(nonce []byte, tx *sql.Tx) {
-  update, err := tx.Prepare("update settings set nonce = ?")
+  update, err := tx.Prepare("UPDATE settings SET nonce = ?")
   if err != nil {
     panic(err)
   }
@@ -164,7 +168,11 @@ func (store *Store) update(updateFn func(*sql.Tx)) {
 
 func (store *Store) AddCredential(credential *Credential) {
   store.update(func(tx *sql.Tx) {
-    insert, err := tx.Prepare("insert into credentials (login, password, website, note) values (?, ?, ?, ?)")
+    insert, err := tx.Prepare(`
+      INSERT INTO credentials (login, password, website, note)
+      VALUES (?, ?, ?, ?)
+    `)
+
     if err != nil {
       panic(err)
     }
@@ -184,7 +192,10 @@ func (store *Store) eachCredential() chan *Credential {
   yield := make(chan *Credential)
 
   go func() {
-    rows, err := store.db.Query("select id, login, password, website, note from credentials")
+    rows, err := store.db.Query(`
+      SELECT id, login, password, website, note FROM credentials
+    `)
+
     if err != nil {
       panic(err)
     }
@@ -241,7 +252,12 @@ func (store *Store) UpdateCredential(credential *Credential) {
   }
 
   store.update(func(tx *sql.Tx) {
-    update, err := tx.Prepare("update credentials set login=?, password=?, website=?, note=? where id=?")
+    update, err := tx.Prepare(`
+      UPDATE credentials
+      SET login=?, password=?, website=?, note=?
+      WHERE id=?
+    `)
+
     if err != nil {
       panic(err)
     }
@@ -264,7 +280,7 @@ func (store *Store) DeleteCredential(credential *Credential) {
   }
 
   store.update(func(tx *sql.Tx) {
-    delete, err := tx.Prepare("delete from credentials where id=?")
+    delete, err := tx.Prepare("DELETE FROM credentials WHERE id=?")
     if err != nil {
       panic(err)
     }
