@@ -7,6 +7,7 @@ import (
   "database/sql"
   "strings"
   "errors"
+  "os"
 )
 
 type Store struct {
@@ -23,6 +24,10 @@ type Credential struct {
 }
 
 func Open(filename string, password string) (*Store, error) {
+  if _, err := os.Stat(filename); os.IsNotExist(err) {
+    return nil, errors.New("Database does not exist.")
+  }
+
   db, err := sql.Open("sqlite3", filename)
   if err != nil {
     return nil, err
@@ -78,11 +83,14 @@ func Open(filename string, password string) (*Store, error) {
   }, nil
 }
 
-func Create(filename string, password string) *Store {
-  db, err := sql.Open("sqlite3", filename)
+func Create(filename string, password string) (*Store, error) {
+  if _, err := os.Stat(filename); err == nil {
+    return nil, errors.New("Database already exists.")
+  }
 
+  db, err := sql.Open("sqlite3", filename)
   if err != nil {
-    panic(err)
+    return nil, err
   }
 
   create := `
@@ -105,7 +113,7 @@ func Create(filename string, password string) *Store {
 
   _, err = db.Exec(create)
   if err != nil {
-    panic(err)
+    return nil, err
   }
 
   const version = 1
@@ -119,7 +127,7 @@ func Create(filename string, password string) *Store {
   `)
 
   if err != nil {
-    panic(err)
+    return nil, err
   }
 
   defer insert.Close()
@@ -127,7 +135,7 @@ func Create(filename string, password string) *Store {
   sentinel := make([]byte, 16)
   _, err = rand.Read(sentinel)
   if err != nil {
-    panic(err)
+    return nil, err
   }
 
   insert.Exec(
@@ -140,7 +148,7 @@ func Create(filename string, password string) *Store {
   return &Store {
     db: db,
     cipher: cipher,
-  }
+  }, nil
 }
 
 func (store *Store) updateNonce(nonce []byte, tx *sql.Tx) {

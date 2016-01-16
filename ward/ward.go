@@ -62,8 +62,12 @@ func (app *App) runInit() {
   fmt.Println("Creating new credential database.")
   password := app.readPasswordConfirm("Master password")
 
-  // TODO: Check if file exists.
-  db := store.Create(app.fileName, password)
+  db, err := store.Create(app.fileName, password)
+  if err != nil {
+    fmt.Printf("Failed to create database: %s\n", err.Error())
+    return
+  }
+
   defer db.Close()
 
   fmt.Printf("Credential database created at %s.\n", app.fileName)
@@ -77,10 +81,10 @@ func (app *App) openStore() *store.Store {
       return db
     }
 
-    if _, ok := err.(crypto.IncorrectPasswordError); ok {
-      fmt.Println(err)
-    } else {
-      panic(err)
+    fmt.Println(err)
+
+    if _, ok := err.(crypto.IncorrectPasswordError); !ok {
+      os.Exit(1)
     }
   }
 }
@@ -261,17 +265,17 @@ func (app *App) runDel(query string) {
   fmt.Println("Credential deleted.")
 }
 
-func (app *App) runExport(filename string, indent bool) {
+func (app *App) runExport(fileName string, indent bool) {
   db := app.openStore()
   defer db.Close()
 
   var err error
   var output *os.File
 
-  if filename == "" {
+  if fileName == "" {
     output = os.Stdout
   } else {
-    output, err = os.Create(filename)
+    output, err = os.Create(fileName)
     if err != nil {
       panic(err)
     }
@@ -294,8 +298,8 @@ func (app *App) runExport(filename string, indent bool) {
 
   output.Write(jsonData)
 
-  if filename != "" {
-    fmt.Printf("Exported credentials to %s.\n", filename)
+  if fileName != "" {
+    fmt.Printf("Exported credentials to %s.\n", fileName)
   }
 }
 
