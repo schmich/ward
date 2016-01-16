@@ -236,6 +236,8 @@ func (app *App) runExport(filename string, indent bool) {
     if err != nil {
       panic(err)
     }
+
+    defer output.Close()
   }
 
   credentials := db.GetCredentials()
