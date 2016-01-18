@@ -20,7 +20,7 @@ import (
 
 type App struct {
   scanner *bufio.Scanner
-  fileName string
+  storeFileName string
 }
 
 func NewApp(fileName string) *App {
@@ -28,7 +28,7 @@ func NewApp(fileName string) *App {
 
   return &App {
     scanner: bufio.NewScanner(os.Stdin),
-    fileName: fullPath,
+    storeFileName: fullPath,
   }
 }
 
@@ -70,7 +70,7 @@ func (app *App) runInit() {
   fmt.Println("Creating new credential database.")
   password := app.readPasswordConfirm("Master password")
 
-  db, err := store.Create(app.fileName, password)
+  db, err := store.Create(app.storeFileName, password)
   if err != nil {
     app.printError("Failed to create database: %s\n", err.Error())
     return
@@ -78,13 +78,13 @@ func (app *App) runInit() {
 
   defer db.Close()
 
-  app.printSuccess("Credential database created at %s.\n", app.fileName)
+  app.printSuccess("Credential database created at %s.\n", app.storeFileName)
 }
 
 func (app *App) openStore() *store.Store {
   for {
     master := app.readPassword("Master password: ")
-    db, err := store.Open(app.fileName, master)
+    db, err := store.Open(app.storeFileName, master)
     if err == nil {
       return db
     }
@@ -325,6 +325,15 @@ func (app *App) runUpdateMasterPassword() {
   app.printSuccess("Master password updated.\n")
 }
 
+func (app *App) runLink(fileName string) {
+  err := os.Link(fileName, app.storeFileName)
+  if err != nil {
+    app.printError("Could not use existing database: %s\n", err)
+  } else {
+    app.printSuccess("Linked to existing database %s -> %s.\n", app.storeFileName, fileName)
+  }
+}
+
 func (app *App) Run(args []string) {
   ward := cli.App("ward", "Secure password manager - https://github.com/schmich/ward")
 
@@ -436,9 +445,12 @@ func (app *App) Run(args []string) {
     fmt.Println("show")
   })
 
-  ward.Command("use", "Use an existing credential database.", func(cmd *cli.Cmd) {
-    // TODO
-    fmt.Println("use")
+  ward.Command("link", "Link to an existing credential database.", func(cmd *cli.Cmd) {
+    file := cmd.StringArg("FILE", "", "Existing credential database to use.")
+
+    cmd.Action = func() {
+      app.runLink(*file)
+    }
   })
 
   ward.Command("export", "Export JSON-formatted credentials.", func(cmd *cli.Cmd) {
@@ -454,6 +466,7 @@ func (app *App) Run(args []string) {
 
   ward.Command("import", "Import JSON-formatted credentials.", func(cmd *cli.Cmd) {
     // TODO
+    // Prompt when same login/website
     fmt.Println("import")
   })
 
