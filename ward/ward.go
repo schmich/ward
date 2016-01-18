@@ -291,7 +291,7 @@ func (app *App) runExport(fileName string, indent bool) {
     defer output.Close()
   }
 
-  credentials := db.GetCredentials()
+  credentials := db.AllCredentials()
 
   var jsonData []byte
   if indent {

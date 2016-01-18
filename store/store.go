@@ -256,7 +256,7 @@ func (store *Store) eachCredential() chan *Credential {
   return yield
 }
 
-func (store *Store) GetCredentials() []*Credential {
+func (store *Store) AllCredentials() []*Credential {
   credentials := make([]*Credential, 0)
 
   for credential := range store.eachCredential() {
@@ -329,7 +329,7 @@ func (store *Store) UpdateMasterPassword(password string) error {
     return err
   }
 
-  credentials := store.GetCredentials()
+  credentials := store.AllCredentials()
 
   store.cipher = newCipher
 
