@@ -224,6 +224,8 @@ func (store *Store) eachCredential() chan *Credential {
   yield := make(chan *Credential)
 
   go func() {
+    defer close(yield)
+
     rows, err := store.db.Query(`
       SELECT id, login, password, website, note FROM credentials
     `)
@@ -249,8 +251,6 @@ func (store *Store) eachCredential() chan *Credential {
 
       yield <- credential
     }
-
-    close(yield)
   }()
 
   return yield
