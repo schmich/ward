@@ -25,7 +25,7 @@ type Credential struct {
 
 func Open(filename string, password string) (*Store, error) {
   if _, err := os.Stat(filename); os.IsNotExist(err) {
-    return nil, errors.New("Database does not exist.")
+    return nil, errors.New("Credential database does not exist.")
   }
 
   db, err := sql.Open("sqlite3", filename)
@@ -133,7 +133,7 @@ func createCipher(db *sql.DB, password string) (*crypto.Cipher, error) {
 
 func Create(filename string, password string) (*Store, error) {
   if _, err := os.Stat(filename); err == nil {
-    return nil, errors.New("Database already exists.")
+    return nil, errors.New("Credential database already exists.")
   }
 
   db, err := sql.Open("sqlite3", filename)

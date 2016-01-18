@@ -325,12 +325,16 @@ func (app *App) runUpdateMasterPassword() {
   app.printSuccess("Master password updated.\n")
 }
 
-func (app *App) runLink(fileName string) {
-  err := os.Link(fileName, app.storeFileName)
+func (app *App) runLink(existingFileName string) {
+  existingFullPath, _ := filepath.Abs(existingFileName)
+  err := os.Link(existingFullPath, app.storeFileName)
   if err != nil {
     app.printError("Could not use existing database: %s\n", err)
   } else {
-    app.printSuccess("Linked to existing database %s -> %s.\n", app.storeFileName, fileName)
+    app.printSuccess(
+      "Linked to existing database %s -> %s.\n",
+      app.storeFileName,
+      existingFullPath)
   }
 }
 
