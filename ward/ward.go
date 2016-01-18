@@ -32,6 +32,14 @@ func NewApp(fileName string) *App {
   }
 }
 
+func (app *App) printSuccess(format string, args ...interface {}) {
+  fmt.Printf(color.GreenString("✓ ") + format, args...)
+}
+
+func (app *App) printError(format string, args ...interface {}) {
+  fmt.Printf(color.RedString("✗ ") + format, args...)
+}
+
 func (app *App) readInput(prompt string) string {
   fmt.Fprint(os.Stderr, color.CyanString(prompt))
   app.scanner.Scan()
@@ -51,7 +59,7 @@ func (app *App) readPasswordConfirm(prompt string) string {
     confirm := app.readPassword(prompt + " (confirm): ")
 
     if password != confirm {
-      fmt.Println("Passwords do not match.")
+      app.printError("Passwords do not match.\n")
     } else {
       return password
     }
@@ -64,13 +72,13 @@ func (app *App) runInit() {
 
   db, err := store.Create(app.fileName, password)
   if err != nil {
-    fmt.Printf("Failed to create database: %s\n", err.Error())
+    app.printError("Failed to create database: %s\n", err.Error())
     return
   }
 
   defer db.Close()
 
-  fmt.Printf("Credential database created at %s.\n", app.fileName)
+  app.printSuccess("Credential database created at %s.\n", app.fileName)
 }
 
 func (app *App) openStore() *store.Store {
@@ -114,7 +122,7 @@ func (app *App) runAdd(login, website, note string) {
     Note: note,
   })
 
-  println("Credential added.")
+  app.printSuccess("Credential added.\n")
 }
 
 func (app *App) runGen(login, website, note string, copyPassword bool, generator *passgen.Generator) {
@@ -148,13 +156,13 @@ func (app *App) runGen(login, website, note string, copyPassword bool, generator
     Note: note,
   })
 
-  print("Credential added. ")
+  app.printSuccess("Credential added. ")
 
   if copyPassword {
     clipboard.WriteAll(password)
-    println("Generated password copied to the clipboard.")
+    fmt.Println("Generated password copied to the clipboard.")
   } else {
-    println()
+    fmt.Println()
   }
 }
 
@@ -174,7 +182,7 @@ func (app *App) readIndex(low, high int, prompt string) int {
     input := app.readInput(prompt)
     index, err := strconv.Atoi(input)
     if (err != nil) || (index < low) || (index > high) {
-      fmt.Println("Invalid choice.")
+      app.printError("Invalid choice.\n")
     } else {
       return index
     }
@@ -195,7 +203,7 @@ func (app *App) selectCredential(credentials []*store.Credential) *store.Credent
 func (app *App) findCredential(db *store.Store, query string) *store.Credential {
   credentials := db.FindCredentials(query)
   if len(credentials) == 0 {
-    fmt.Printf("No credentials match the query \"%s\".\n", query)
+    app.printError("No credentials match the query \"%s\".\n", query)
     return nil
   } else if len(credentials) == 1 {
     return credentials[0]
@@ -215,7 +223,7 @@ func (app *App) runCopy(query string) {
   }
 
   clipboard.WriteAll(credential.Password)
-  fmt.Println("Password copied to the clipboard.")
+  app.printSuccess("Password copied to the clipboard.\n")
 }
 
 func (app *App) runEdit(query string) {
@@ -249,7 +257,7 @@ func (app *App) runEdit(query string) {
   }
 
   db.UpdateCredential(credential)
-  fmt.Println("Credential updated.")
+  app.printSuccess("Credential updated.\n")
 }
 
 func (app *App) runDel(query string) {
@@ -262,7 +270,7 @@ func (app *App) runDel(query string) {
   }
 
   db.DeleteCredential(credential)
-  fmt.Println("Credential deleted.")
+  app.printSuccess("Credential deleted.\n")
 }
 
 func (app *App) runExport(fileName string, indent bool) {
@@ -299,7 +307,7 @@ func (app *App) runExport(fileName string, indent bool) {
   output.Write(jsonData)
 
   if fileName != "" {
-    fmt.Printf("Exported credentials to %s.\n", fileName)
+    app.printSuccess("Exported credentials to %s.\n", fileName)
   }
 }
 
