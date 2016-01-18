@@ -89,7 +89,7 @@ func (app *App) openStore() *store.Store {
       return db
     }
 
-    fmt.Println(err)
+    app.printError("%s\n", err)
 
     if _, ok := err.(crypto.IncorrectPasswordError); !ok {
       os.Exit(1)
@@ -311,6 +311,20 @@ func (app *App) runExport(fileName string, indent bool) {
   }
 }
 
+func (app *App) runUpdateMasterPassword() {
+  db := app.openStore()
+  defer db.Close()
+
+  password := app.readPasswordConfirm("New master password")
+  err := db.UpdateMasterPassword(password)
+  if err != nil {
+    app.printError("%s\n", err)
+    return
+  }
+
+  app.printSuccess("Master password updated.\n")
+}
+
 func (app *App) Run(args []string) {
   ward := cli.App("ward", "Secure password manager - https://github.com/schmich/ward")
 
@@ -444,8 +458,7 @@ func (app *App) Run(args []string) {
   })
 
   ward.Command("master", "Update master password.", func(cmd *cli.Cmd) {
-    // TODO
-    fmt.Println("master")
+    cmd.Action = app.runUpdateMasterPassword
   })
 
   ward.Run(args)

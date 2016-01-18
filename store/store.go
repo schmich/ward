@@ -83,6 +83,54 @@ func Open(filename string, password string) (*Store, error) {
   }, nil
 }
 
+func createCipher(db *sql.DB, password string) (*crypto.Cipher, error) {
+  const version = 1
+  const stretch = 100000
+
+  tx, err := db.Begin()
+  if err != nil {
+    return nil, err
+  }
+
+  cipher := crypto.NewCipher(password, stretch)
+
+  delete, err := tx.Prepare("DELETE FROM settings")
+  if err != nil {
+    return nil, err
+  }
+
+  defer delete.Close()
+  delete.Exec()
+
+  insert, err := tx.Prepare(`
+    INSERT INTO settings (salt, stretch, nonce, sentinel, version)
+    VALUES (?, ?, ?, ?, ?)
+  `)
+
+  if err != nil {
+    return nil, err
+  }
+
+  defer insert.Close()
+
+  sentinel := make([]byte, 16)
+  _, err = rand.Read(sentinel)
+  if err != nil {
+    return nil, err
+  }
+
+  insert.Exec(
+    cipher.GetSalt(),
+    stretch,
+    cipher.GetNonce(),
+    cipher.Encrypt(sentinel),
+    version)
+
+  tx.Commit()
+
+  return cipher, nil
+}
+
 func Create(filename string, password string) (*Store, error) {
   if _, err := os.Stat(filename); err == nil {
     return nil, errors.New("Database already exists.")
@@ -116,34 +164,10 @@ func Create(filename string, password string) (*Store, error) {
     return nil, err
   }
 
-  const version = 1
-  const stretch = 100000
-
-  cipher := crypto.NewCipher(password, stretch)
-
-  insert, err := db.Prepare(`
-    INSERT INTO settings (salt, stretch, nonce, sentinel, version)
-    VALUES (?, ?, ?, ?, ?)
-  `)
-
+  cipher, err := createCipher(db, password)
   if err != nil {
     return nil, err
   }
-
-  defer insert.Close()
-
-  sentinel := make([]byte, 16)
-  _, err = rand.Read(sentinel)
-  if err != nil {
-    return nil, err
-  }
-
-  insert.Exec(
-    cipher.GetSalt(),
-    stretch,
-    cipher.GetNonce(),
-    cipher.Encrypt(sentinel),
-    version)
 
   return &Store {
     db: db,
@@ -297,6 +321,25 @@ func (store *Store) DeleteCredential(credential *Credential) {
 
     delete.Exec(credential.id)
   })
+}
+
+func (store *Store) UpdateMasterPassword(password string) error {
+  newCipher, err := createCipher(store.db, password)
+  if err != nil {
+    return err
+  }
+
+  credentials := store.GetCredentials()
+
+  store.cipher = newCipher
+
+  store.update(func(tx *sql.Tx) {
+    for _, credential := range credentials {
+      store.UpdateCredential(credential)
+    }
+  })
+
+  return nil
 }
 
 func (store *Store) Close() {
