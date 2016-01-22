@@ -7,6 +7,7 @@ import (
   "crypto/rand"
   "math/big"
   "strings"
+  "errors"
 )
 
 type Generator struct {
@@ -139,6 +140,14 @@ func pow(x int, y int) *big.Int {
   return xi.Exp(xi, yi, nil)
 }
 
+func max(x, y int) int {
+  if x > y {
+    return x
+  } else {
+    return y
+  }
+}
+
 func (this *Generator) resultWeight(result map[core.VarId]int, store *core.Store, length int, alphabets map[string]string) *big.Int {
   // weight = (length! * product(i=1,n | len(alphabet_n)^slots_n)) / (product(i=1,n | slots_n!)
 
@@ -169,7 +178,32 @@ func exclude(alphabet, exclusions string) string {
   return alphabet
 }
 
-func (this *Generator) Generate() string {
+func randLengthResults(resultSet map[int]map[core.VarId]int, lengthVar core.VarId) ([]map[core.VarId]int, int) {
+  lengthMap := make(map[int]bool, 0)
+  for _, result := range resultSet {
+    lengthMap[result[lengthVar]] = true
+  }
+
+  lengths := make([]int, len(lengthMap))
+  i := 0
+  for key := range lengthMap {
+    lengths[i] = key
+    i++
+  }
+
+  length := lengths[randInt(0, len(lengths) - 1)]
+  filteredResultSet := make([]map[core.VarId]int, 0)
+
+  for _, result := range resultSet {
+    if result[lengthVar] == length {
+      filteredResultSet = append(filteredResultSet, result)
+    }
+  }
+
+  return filteredResultSet, length
+}
+
+func (this *Generator) Generate() (string, error)  {
   // TODO: Handle errors:
   // No alphabets defined
   // All alphabets excluded
@@ -180,61 +214,50 @@ func (this *Generator) Generate() string {
     alphabets[name] = exclude(alphabet, this.Exclude)
   }
 
-  chosenLength := randInt(this.minLength, this.maxLength)
-
   store := core.CreateStore()
-  length := core.CreateIntVarFromTo("length", store, chosenLength, chosenLength)
+  lengthVar := core.CreateIntVarFromTo("length", store, this.minLength, this.maxLength)
 
   parts := make([]core.VarId, 0)
 
   for name, _ := range alphabets {
-    var min, max int
+    var minVal, maxVal int
     var ok bool
 
-    if min, ok = this.min[name]; !ok {
-      min = 0
+    if minVal, ok = this.min[name]; !ok {
+      minVal = 0
     }
 
-    if max, ok = this.max[name]; !ok {
-      max = chosenLength
+    if maxVal, ok = this.max[name]; !ok || (maxVal == -1) {
+      maxVal = max(minVal, this.maxLength)
     }
 
-    if max == -1 {
-      max = chosenLength
-    }
-
-    intVar := core.CreateIntVarFromTo(name, store, min, max)
+    intVar := core.CreateIntVarFromTo(name, store, minVal, maxVal)
     parts = append(parts, intVar)
   }
 
-  if len(parts) == 1 {
-    eq := propagator.CreateXeqC(parts[0], chosenLength)
-    store.AddPropagator(eq)
-  } else {
-    sum := propagator.CreateSum(store, length, parts)
-    store.AddPropagator(sum)
-  }
+  sum := propagator.CreateSum(store, lengthVar, parts)
+  store.AddPropagator(sum)
 
   query := labeling.CreateSearchAllQuery()
   solutionFound := labeling.Labeling(store, query, labeling.SmallestDomainFirst, labeling.InDomainMin)
 
   if !solutionFound {
-    // TODO: Support error.
-    panic("Solution not found.")
+    return "", errors.New("Impossible to satisfy password constraints.")
   }
 
   resultSet := query.GetResultSet()
+  results, length := randLengthResults(resultSet, lengthVar)
 
-  choices := make([]*choice, len(resultSet))
-  for i, result := range resultSet {
+  choices := make([]*choice, len(results))
+  for i, result := range results {
     choices[i] = &choice {
-      Weight: this.resultWeight(result, store, chosenLength, alphabets),
+      Weight: this.resultWeight(result, store, length, alphabets),
       Item: result,
     }
   }
 
-  chosenResult := weightedRand(choices)
-  result := chosenResult.Item.(map[core.VarId]int)
+  randResult := weightedRand(choices)
+  result := randResult.Item.(map[core.VarId]int)
 
   counts := make(map[string]int)
 
@@ -251,5 +274,5 @@ func (this *Generator) Generate() string {
 
   shuffle(bytes)
 
-  return string(bytes)
+  return string(bytes), nil
 }

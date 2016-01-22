@@ -125,14 +125,19 @@ func (app *App) runAdd(login, website, note string) {
   app.printSuccess("Credential added.\n")
 }
 
+type passwordResult struct {
+  password string
+  err error
+}
+
 func (app *App) runGen(login, website, note string, copyPassword bool, generator *passgen.Generator) {
   db := app.openStore()
   defer db.Close()
 
-  // TODO: Handle password generation error.
-  passwordChan := make(chan string)
+  passwordChan := make(chan *passwordResult)
   go func() {
-    passwordChan <- generator.Generate()
+    password, err := generator.Generate()
+    passwordChan <- &passwordResult { password: password, err: err }
   }()
 
   if login == "" {
@@ -147,11 +152,15 @@ func (app *App) runGen(login, website, note string, copyPassword bool, generator
     note = app.readInput("Note: ")
   }
 
-  password := <-passwordChan
+  result := <-passwordChan
+  if result.err != nil {
+    app.printError("%s\n", result.err)
+    return
+  }
 
   db.AddCredential(&store.Credential {
     Login: login,
-    Password: password,
+    Password: result.password,
     Website: website,
     Note: note,
   })
@@ -159,7 +168,7 @@ func (app *App) runGen(login, website, note string, copyPassword bool, generator
   app.printSuccess("Credential added. ")
 
   if copyPassword {
-    clipboard.WriteAll(password)
+    clipboard.WriteAll(result.password)
     fmt.Println("Generated password copied to the clipboard.")
   } else {
     fmt.Println()
