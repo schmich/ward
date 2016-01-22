@@ -19,7 +19,7 @@ type Credential struct {
   id int
   Login string `json:"login"`
   Password string `json:"password"`
-  Website string `json:"website"`
+  Realm string `json:"realm"`
   Note string `json:"note"`
 }
 
@@ -146,7 +146,7 @@ func Create(filename string, password string) (*Store, error) {
       id INTEGER NOT NULL PRIMARY KEY,
       login BLOB,
       password BLOB,
-      website BLOB,
+      realm BLOB,
       note BLOB
     );
 
@@ -201,7 +201,7 @@ func (store *Store) update(updateFn func(*sql.Tx)) {
 func (store *Store) AddCredential(credential *Credential) {
   store.update(func(tx *sql.Tx) {
     insert, err := tx.Prepare(`
-      INSERT INTO credentials (login, password, website, note)
+      INSERT INTO credentials (login, password, realm, note)
       VALUES (?, ?, ?, ?)
     `)
 
@@ -214,7 +214,7 @@ func (store *Store) AddCredential(credential *Credential) {
     insert.Exec(
       store.cipher.Encrypt([]byte(credential.Login)),
       store.cipher.Encrypt([]byte(credential.Password)),
-      store.cipher.Encrypt([]byte(credential.Website)),
+      store.cipher.Encrypt([]byte(credential.Realm)),
       store.cipher.Encrypt([]byte(credential.Note)),
     )
   })
@@ -227,7 +227,7 @@ func (store *Store) eachCredential() chan *Credential {
     defer close(yield)
 
     rows, err := store.db.Query(`
-      SELECT id, login, password, website, note FROM credentials
+      SELECT id, login, password, realm, note FROM credentials
     `)
 
     if err != nil {
@@ -238,14 +238,14 @@ func (store *Store) eachCredential() chan *Credential {
 
     for rows.Next() {
       var id int
-      var cipherLogin, cipherPassword, cipherWebsite, cipherNote []byte
-      rows.Scan(&id, &cipherLogin, &cipherPassword, &cipherWebsite, &cipherNote)
+      var cipherLogin, cipherPassword, cipherRealm, cipherNote []byte
+      rows.Scan(&id, &cipherLogin, &cipherPassword, &cipherRealm, &cipherNote)
 
       credential := &Credential {
         id: id,
         Login: string(store.cipher.Decrypt(cipherLogin)),
         Password: string(store.cipher.Decrypt(cipherPassword)),
-        Website: string(store.cipher.Decrypt(cipherWebsite)),
+        Realm: string(store.cipher.Decrypt(cipherRealm)),
         Note: string(store.cipher.Decrypt(cipherNote)),
       }
 
@@ -270,7 +270,7 @@ func (store *Store) FindCredentials(query string) []*Credential {
   matches := make([]*Credential, 0)
 
   for credential := range store.eachCredential() {
-    if strings.Contains(credential.Login, query) || strings.Contains(credential.Website, query) || strings.Contains(credential.Note, query) {
+    if strings.Contains(credential.Login, query) || strings.Contains(credential.Realm, query) || strings.Contains(credential.Note, query) {
       matches = append(matches, credential)
     }
   }
@@ -286,7 +286,7 @@ func (store *Store) UpdateCredential(credential *Credential) {
   store.update(func(tx *sql.Tx) {
     update, err := tx.Prepare(`
       UPDATE credentials
-      SET login=?, password=?, website=?, note=?
+      SET login=?, password=?, realm=?, note=?
       WHERE id=?
     `)
 
@@ -299,7 +299,7 @@ func (store *Store) UpdateCredential(credential *Credential) {
     update.Exec(
       store.cipher.Encrypt([]byte(credential.Login)),
       store.cipher.Encrypt([]byte(credential.Password)),
-      store.cipher.Encrypt([]byte(credential.Website)),
+      store.cipher.Encrypt([]byte(credential.Realm)),
       store.cipher.Encrypt([]byte(credential.Note)),
       credential.id,
     )

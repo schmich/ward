@@ -98,7 +98,7 @@ func (app *App) openStore() *store.Store {
   }
 }
 
-func (app *App) runAdd(login, website, note string) {
+func (app *App) runAdd(login, realm, note string) {
   db := app.openStore()
   defer db.Close()
 
@@ -108,8 +108,8 @@ func (app *App) runAdd(login, website, note string) {
 
   password := app.readPasswordConfirm("Password")
 
-  if website == "" {
-    website = app.readInput("Website: ")
+  if realm == "" {
+    realm = app.readInput("Realm: ")
   }
 
   if note == "" {
@@ -119,7 +119,7 @@ func (app *App) runAdd(login, website, note string) {
   db.AddCredential(&store.Credential {
     Login: login,
     Password: password,
-    Website: website,
+    Realm: realm,
     Note: note,
   })
 
@@ -131,7 +131,7 @@ type passwordResult struct {
   err error
 }
 
-func (app *App) runGen(login, website, note string, copyPassword bool, generator *passgen.Generator) {
+func (app *App) runGen(login, realm, note string, copyPassword bool, generator *passgen.Generator) {
   db := app.openStore()
   defer db.Close()
 
@@ -145,8 +145,8 @@ func (app *App) runGen(login, website, note string, copyPassword bool, generator
     login = app.readInput("Login: ")
   }
 
-  if website == "" {
-    website = app.readInput("Website: ")
+  if realm == "" {
+    realm = app.readInput("Realm: ")
   }
 
   if note == "" {
@@ -162,7 +162,7 @@ func (app *App) runGen(login, website, note string, copyPassword bool, generator
   db.AddCredential(&store.Credential {
     Login: login,
     Password: result.password,
-    Website: website,
+    Realm: realm,
     Note: note,
   })
 
@@ -201,7 +201,7 @@ func (app *App) readIndex(low, high int, prompt string) int {
 
 func (app *App) selectCredential(credentials []*store.Credential) *store.Credential {
   for i, credential := range credentials {
-    parts := []string { credential.Login, credential.Website, credential.Note }
+    parts := []string { credential.Login, credential.Realm, credential.Note }
     parts = filter(parts, func(s string) bool { return s != "" })
     fmt.Printf("%d. %s\n", i + 1, strings.Join(parts, ", "))
   }
@@ -247,7 +247,7 @@ func (app *App) runEdit(query string) {
 
   fmt.Printf("Login: %s\n", credential.Login)
   fmt.Printf("Password: %s\n", credential.Password)
-  fmt.Printf("Website: %s\n", credential.Website)
+  fmt.Printf("Realm: %s\n", credential.Realm)
   fmt.Printf("Note: %s\n", credential.Note)
 
   if login := app.readInput("Login (blank to keep current): "); login != "" {
@@ -258,8 +258,8 @@ func (app *App) runEdit(query string) {
     credential.Password = password
   }
 
-  if website := app.readInput("Website (blank to keep current): "); website != "" {
-    credential.Website = website
+  if realm := app.readInput("Realm (blank to keep current): "); realm != "" {
+    credential.Realm = realm
   }
 
   if note := app.readInput("Note (blank to keep current): "); note != "" {
@@ -393,17 +393,17 @@ func (app *App) Run(args []string) {
 
   ward.Command("add", "Add a credential with a known password.", func(cmd *cli.Cmd) {
     login := cmd.StringOpt("login", "", "Login for credential, e.g. username or email.")
-    website := cmd.StringOpt("website", "", "Website for credential.")
+    realm := cmd.StringOpt("realm", "", "Realm for credential, e.g. website or WiFi AP name.")
     note := cmd.StringOpt("note", "", "Note for credential.")
 
     cmd.Action = func() {
-      app.runAdd(*login, *website, *note)
+      app.runAdd(*login, *realm, *note)
     }
   })
 
   ward.Command("gen", "Add a credential with a generated password.", func(cmd *cli.Cmd) {
     login := cmd.StringOpt("login", "", "Login for credential, e.g. username or email.")
-    website := cmd.StringOpt("website", "", "Website for credential.")
+    realm := cmd.StringOpt("realm", "", "Realm for credential, e.g. website or WiFi AP name.")
     note := cmd.StringOpt("note", "", "Note for credential.")
 
     length := cmd.IntOpt("length", 0, "Password length.")
@@ -460,7 +460,7 @@ func (app *App) Run(args []string) {
       if (*noSimilar) {
         generator.Exclude += "B8|1IiLl0Oo"
       }
-      app.runGen(*login, *website, *note, !*noCopy, generator)
+      app.runGen(*login, *realm, *note, !*noCopy, generator)
     }
   })
 
