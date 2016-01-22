@@ -11,6 +11,7 @@ import (
   "github.com/atotto/clipboard"
   "encoding/json"
   "path/filepath"
+  "io/ioutil"
   "bufio"
   "strings"
   "strconv"
@@ -320,6 +321,40 @@ func (app *App) runExport(fileName string, indent bool) {
   }
 }
 
+func (app *App) runImport(fileName string) {
+  db := app.openStore()
+  defer db.Close()
+
+  input, err := os.Open(fileName)
+  if err != nil {
+    app.printError("Failed to open %s: %s\n", fileName, err)
+    return
+  }
+
+  defer input.Close()
+
+  contents, err := ioutil.ReadAll(input)
+  if err != nil {
+    app.printError("%s\n", err)
+    return
+  }
+
+  var credentials []store.Credential
+  err = json.Unmarshal(contents, &credentials)
+
+  if err != nil {
+    app.printError("%s\n", err)
+    return
+  }
+
+  fmt.Printf("Importing %d credentials.\n", len(credentials))
+  for _, credential := range credentials {
+    db.AddCredential(&credential)
+  }
+
+  app.printSuccess("Imported credentials from %s.\n", fileName)
+}
+
 func (app *App) runUpdateMasterPassword() {
   db := app.openStore()
   defer db.Close()
@@ -478,9 +513,11 @@ func (app *App) Run(args []string) {
   })
 
   ward.Command("import", "Import JSON-formatted credentials.", func(cmd *cli.Cmd) {
-    // TODO
-    // Prompt when same login/website
-    fmt.Println("import")
+    file := cmd.StringArg("FILE", "", "File to import.")
+
+    cmd.Action = func() {
+      app.runImport(*file)
+    }
   })
 
   ward.Command("master", "Update master password.", func(cmd *cli.Cmd) {
