@@ -472,7 +472,7 @@ func (app *App) Run(args []string) {
     }
   })
 
-  ward.Command("edit", "Edit existing credentials.", func(cmd *cli.Cmd) {
+  ward.Command("edit", "Edit an existing credential.", func(cmd *cli.Cmd) {
     query := cmd.StringArg("QUERY", "", "Criteria to match.")
 
     cmd.Action = func() {
