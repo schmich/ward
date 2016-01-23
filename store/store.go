@@ -83,16 +83,19 @@ func Open(filename string, password string) (*Store, error) {
   }, nil
 }
 
-func createCipher(db *sql.DB, password string) (*crypto.Cipher, error) {
+func createCipher(db *sql.DB, password string, keyStretch int) (*crypto.Cipher, error) {
+  if keyStretch < 1 {
+    return nil, errors.New("Key stretch must be at least 1.")
+  }
+
   const version = 1
-  const stretch = 300000
 
   tx, err := db.Begin()
   if err != nil {
     return nil, err
   }
 
-  cipher := crypto.NewCipher(password, stretch)
+  cipher := crypto.NewCipher(password, keyStretch)
 
   delete, err := tx.Prepare("DELETE FROM settings")
   if err != nil {
@@ -121,7 +124,7 @@ func createCipher(db *sql.DB, password string) (*crypto.Cipher, error) {
 
   insert.Exec(
     cipher.GetSalt(),
-    stretch,
+    keyStretch,
     cipher.GetNonce(),
     cipher.Encrypt(sentinel),
     version)
@@ -131,7 +134,7 @@ func createCipher(db *sql.DB, password string) (*crypto.Cipher, error) {
   return cipher, nil
 }
 
-func Create(filename string, password string) (*Store, error) {
+func Create(filename string, password string, keyStretch int) (*Store, error) {
   if _, err := os.Stat(filename); err == nil {
     return nil, errors.New("Credential database already exists.")
   }
@@ -140,6 +143,13 @@ func Create(filename string, password string) (*Store, error) {
   if err != nil {
     return nil, err
   }
+
+  defer func() {
+    if err != nil {
+      db.Close()
+      os.Remove(filename)
+    }
+  }()
 
   create := `
     CREATE TABLE credentials (
@@ -164,7 +174,7 @@ func Create(filename string, password string) (*Store, error) {
     return nil, err
   }
 
-  cipher, err := createCipher(db, password)
+  cipher, err := createCipher(db, password, keyStretch)
   if err != nil {
     return nil, err
   }
@@ -338,8 +348,8 @@ func (store *Store) DeleteCredential(credential *Credential) {
   })
 }
 
-func (store *Store) UpdateMasterPassword(password string) error {
-  newCipher, err := createCipher(store.db, password)
+func (store *Store) UpdateMasterPassword(password string, keyStretch int) error {
+  newCipher, err := createCipher(store.db, password, keyStretch)
   if err != nil {
     return err
   }

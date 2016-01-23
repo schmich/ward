@@ -67,11 +67,11 @@ func (app *App) readPasswordConfirm(prompt string) string {
   }
 }
 
-func (app *App) runInit() {
+func (app *App) runInit(keyStretch int) {
   fmt.Println("Creating new credential database.")
   password := app.readPasswordConfirm("Master password")
 
-  db, err := store.Create(app.storeFileName, password)
+  db, err := store.Create(app.storeFileName, password, keyStretch)
   if err != nil {
     app.printError("Failed to create database: %s\n", err.Error())
     return
@@ -376,12 +376,12 @@ func (app *App) runImport(fileName string) {
   app.printSuccess("Imported credentials from %s.\n", fileName)
 }
 
-func (app *App) runUpdateMasterPassword() {
+func (app *App) runUpdateMasterPassword(keyStretch int) {
   db := app.openStore()
   defer db.Close()
 
   password := app.readPasswordConfirm("New master password")
-  err := db.UpdateMasterPassword(password)
+  err := db.UpdateMasterPassword(password, keyStretch)
   if err != nil {
     app.printError("%s\n", err)
     return
@@ -409,11 +409,12 @@ func (app *App) Run(args []string) {
   ward.Version("v version", "ward 0.0.1")
 
   ward.Command("init", "Create a new credential database.", func(cmd *cli.Cmd) {
+    stretch := cmd.IntOpt("stretch", 200000, "Key stretch iterations.")
     file := cmd.StringOpt("link", "", "Link to an existing credential database.")
 
     cmd.Action = func() {
       if *file == "" {
-        app.runInit()
+        app.runInit(*stretch)
       } else {
         app.runLink(*file)
       }
@@ -563,7 +564,11 @@ func (app *App) Run(args []string) {
   })
 
   ward.Command("master", "Update master password.", func(cmd *cli.Cmd) {
-    cmd.Action = app.runUpdateMasterPassword
+    stretch := cmd.IntOpt("stretch", 200000, "Key stretch iterations.")
+
+    cmd.Action = func() {
+      app.runUpdateMasterPassword(*stretch)
+    }
   })
 
   ward.Run(args)
