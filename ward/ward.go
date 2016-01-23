@@ -313,7 +313,8 @@ func (app *App) runExport(fileName string, indent bool) {
   }
 
   if err != nil {
-    panic(err)
+    app.printError("%s\n", err)
+    return
   }
 
   output.Write(jsonData)
