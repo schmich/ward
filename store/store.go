@@ -23,12 +23,12 @@ type Credential struct {
   Note string `json:"note"`
 }
 
-func Open(filename string, password string) (*Store, error) {
-  if _, err := os.Stat(filename); os.IsNotExist(err) {
+func Open(fileName string, password string) (*Store, error) {
+  if _, err := os.Stat(fileName); os.IsNotExist(err) {
     return nil, errors.New("Credential database does not exist.")
   }
 
-  db, err := sql.Open("sqlite3", filename)
+  db, err := sql.Open("sqlite3", fileName)
   if err != nil {
     return nil, err
   }
@@ -134,12 +134,12 @@ func createCipher(db *sql.DB, password string, keyStretch int) (*crypto.Cipher, 
   return cipher, nil
 }
 
-func Create(filename string, password string, keyStretch int) (*Store, error) {
-  if _, err := os.Stat(filename); err == nil {
+func Create(fileName string, password string, keyStretch int) (*Store, error) {
+  if _, err := os.Stat(fileName); err == nil {
     return nil, errors.New("Credential database already exists.")
   }
 
-  db, err := sql.Open("sqlite3", filename)
+  db, err := sql.Open("sqlite3", fileName)
   if err != nil {
     return nil, err
   }
@@ -147,7 +147,7 @@ func Create(filename string, password string, keyStretch int) (*Store, error) {
   defer func() {
     if err != nil {
       db.Close()
-      os.Remove(filename)
+      os.Remove(fileName)
     }
   }()
 
