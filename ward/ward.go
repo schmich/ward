@@ -391,6 +391,14 @@ func (app *App) Run(args []string) {
     cmd.Action = app.runInit
   })
 
+  ward.Command("link", "Link to an existing credential database.", func(cmd *cli.Cmd) {
+    file := cmd.StringArg("FILE", "", "Existing credential database to use.")
+
+    cmd.Action = func() {
+      app.runLink(*file)
+    }
+  })
+
   ward.Command("add", "Add a credential with a known password.", func(cmd *cli.Cmd) {
     login := cmd.StringOpt("login", "", "Login for credential, e.g. username or email.")
     realm := cmd.StringOpt("realm", "", "Realm for credential, e.g. website or WiFi AP name.")
@@ -491,14 +499,6 @@ func (app *App) Run(args []string) {
   ward.Command("show", "Show a stored credential.", func(cmd *cli.Cmd) {
     // TODO
     fmt.Println("show")
-  })
-
-  ward.Command("link", "Link to an existing credential database.", func(cmd *cli.Cmd) {
-    file := cmd.StringArg("FILE", "", "Existing credential database to use.")
-
-    cmd.Action = func() {
-      app.runLink(*file)
-    }
   })
 
   ward.Command("export", "Export JSON-formatted credentials.", func(cmd *cli.Cmd) {
