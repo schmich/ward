@@ -213,12 +213,14 @@ func (app *App) selectCredential(credentials []*store.Credential) *store.Credent
 func (app *App) findCredential(db *store.Store, query []string) *store.Credential {
   credentials := db.FindCredentials(query)
   if len(credentials) == 0 {
-    app.printError("No credentials match the query \"%s\".\n", query)
+    queryString := strings.Join(query, " ")
+    app.printError("No credentials match \"%s\".\n", queryString)
     return nil
   } else if len(credentials) == 1 {
     return credentials[0]
   } else {
-    fmt.Printf("Found multiple credentials matching \"%s\":\n", query)
+    queryString := strings.Join(query, " ")
+    fmt.Printf("Found multiple credentials matching \"%s\":\n", queryString)
     return app.selectCredential(credentials)
   }
 }
