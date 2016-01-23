@@ -225,6 +225,22 @@ func (app *App) findCredential(db *store.Store, query []string) *store.Credentia
   }
 }
 
+func getIdentifier(credential *store.Credential) string {
+  if credential.Login != "" {
+    if credential.Realm != "" {
+      return credential.Login + ":" + credential.Realm
+    } else {
+      return credential.Login
+    }
+  } else {
+    if credential.Realm != "" {
+      return credential.Realm
+    } else {
+      return ""
+    }
+  }
+}
+
 func (app *App) runCopy(query []string) {
   db := app.openStore()
   defer db.Close()
@@ -235,7 +251,9 @@ func (app *App) runCopy(query []string) {
   }
 
   clipboard.WriteAll(credential.Password)
-  app.printSuccess("Password copied to the clipboard.\n")
+  identifier := getIdentifier(credential)
+
+  app.printSuccess("Password for %s copied to the clipboard.\n", identifier)
 }
 
 func (app *App) runEdit(query []string) {
