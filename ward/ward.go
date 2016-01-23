@@ -411,7 +411,7 @@ func (app *App) Run(args []string) {
   ward.Command("init", "Create a new credential database.", func(cmd *cli.Cmd) {
     cmd.Spec = "[--stretch|--link]"
 
-    stretch := cmd.IntOpt("stretch", 200000, "Key stretch iterations.")
+    stretch := cmd.IntOpt("stretch", 200000, "Password key stretch iterations.")
     file := cmd.StringOpt("link", "", "Link to an existing credential database.")
 
     cmd.Action = func() {
@@ -566,7 +566,7 @@ func (app *App) Run(args []string) {
   })
 
   ward.Command("master", "Update master password.", func(cmd *cli.Cmd) {
-    stretch := cmd.IntOpt("stretch", 200000, "Key stretch iterations.")
+    stretch := cmd.IntOpt("stretch", 200000, "Password key stretch iterations.")
 
     cmd.Action = func() {
       app.runUpdateMasterPassword(*stretch)
