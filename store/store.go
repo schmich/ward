@@ -85,7 +85,7 @@ func Open(filename string, password string) (*Store, error) {
 
 func createCipher(db *sql.DB, password string) (*crypto.Cipher, error) {
   const version = 1
-  const stretch = 100000
+  const stretch = 300000
 
   tx, err := db.Begin()
   if err != nil {
