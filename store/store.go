@@ -266,11 +266,18 @@ func (store *Store) AllCredentials() []*Credential {
   return credentials
 }
 
-func (store *Store) FindCredentials(query string) []*Credential {
+func (store *Store) FindCredentials(query []string) []*Credential {
   matches := make([]*Credential, 0)
 
   for credential := range store.eachCredential() {
-    if strings.Contains(credential.Login, query) || strings.Contains(credential.Realm, query) || strings.Contains(credential.Note, query) {
+    valid := true
+    for _, pattern := range query {
+      if !strings.Contains(credential.Login, pattern) && !strings.Contains(credential.Realm, pattern) && !strings.Contains(credential.Note, pattern) {
+        valid = false
+        break
+      }
+    }
+    if (valid) {
       matches = append(matches, credential)
     }
   }

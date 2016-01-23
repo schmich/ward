@@ -210,7 +210,7 @@ func (app *App) selectCredential(credentials []*store.Credential) *store.Credent
   return credentials[index - 1]
 }
 
-func (app *App) findCredential(db *store.Store, query string) *store.Credential {
+func (app *App) findCredential(db *store.Store, query []string) *store.Credential {
   credentials := db.FindCredentials(query)
   if len(credentials) == 0 {
     app.printError("No credentials match the query \"%s\".\n", query)
@@ -223,7 +223,7 @@ func (app *App) findCredential(db *store.Store, query string) *store.Credential 
   }
 }
 
-func (app *App) runCopy(query string) {
+func (app *App) runCopy(query []string) {
   db := app.openStore()
   defer db.Close()
 
@@ -236,7 +236,7 @@ func (app *App) runCopy(query string) {
   app.printSuccess("Password copied to the clipboard.\n")
 }
 
-func (app *App) runEdit(query string) {
+func (app *App) runEdit(query []string) {
   db := app.openStore()
   defer db.Close()
 
@@ -270,7 +270,7 @@ func (app *App) runEdit(query string) {
   app.printSuccess("Credential updated.\n")
 }
 
-func (app *App) runDel(query string) {
+func (app *App) runDel(query []string) {
   db := app.openStore()
   defer db.Close()
 
@@ -473,7 +473,14 @@ func (app *App) Run(args []string) {
   })
 
   ward.Command("copy", "Copy a password to the clipboard.", func(cmd *cli.Cmd) {
-    query := cmd.StringArg("QUERY", "", "Criteria to match.")
+    cmd.Spec = "QUERY..."
+
+    query := cmd.Strings(cli.StringsArg {
+      Name: "QUERY",
+      Desc: "Criteria to match.",
+      Value: []string{},
+      EnvVar: "",
+    })
 
     cmd.Action = func() {
       app.runCopy(*query)
@@ -481,7 +488,14 @@ func (app *App) Run(args []string) {
   })
 
   ward.Command("edit", "Edit an existing credential.", func(cmd *cli.Cmd) {
-    query := cmd.StringArg("QUERY", "", "Criteria to match.")
+    cmd.Spec = "QUERY..."
+
+    query := cmd.Strings(cli.StringsArg {
+      Name: "QUERY",
+      Desc: "Criteria to match.",
+      Value: []string{},
+      EnvVar: "",
+    })
 
     cmd.Action = func() {
       app.runEdit(*query)
@@ -489,7 +503,14 @@ func (app *App) Run(args []string) {
   })
 
   ward.Command("del", "Delete a stored credential.", func(cmd *cli.Cmd) {
-    query := cmd.StringArg("QUERY", "", "Criteria to match.")
+    cmd.Spec = "QUERY..."
+
+    query := cmd.Strings(cli.StringsArg {
+      Name: "QUERY",
+      Desc: "Criteria to match.",
+      Value: []string{},
+      EnvVar: "",
+    })
 
     cmd.Action = func() {
       app.runDel(*query)
