@@ -269,10 +269,18 @@ func (store *Store) AllCredentials() []*Credential {
 func (store *Store) FindCredentials(query []string) []*Credential {
   matches := make([]*Credential, 0)
 
+  patterns := make([]string, len(query))
+  for i, queryString := range query {
+    patterns[i] = strings.ToLower(queryString)
+  }
+
   for credential := range store.eachCredential() {
     valid := true
-    for _, pattern := range query {
-      if !strings.Contains(credential.Login, pattern) && !strings.Contains(credential.Realm, pattern) && !strings.Contains(credential.Note, pattern) {
+    llogin := strings.ToLower(credential.Login)
+    lrealm := strings.ToLower(credential.Realm)
+    lnote := strings.ToLower(credential.Note)
+    for _, pattern := range patterns {
+      if !strings.Contains(llogin, pattern) && !strings.Contains(lrealm, pattern) && !strings.Contains(lnote, pattern) {
         valid = false
         break
       }
