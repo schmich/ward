@@ -22,8 +22,8 @@ type Generator struct {
 func New() *Generator {
   return &Generator {
     alphabets: make(map[string]string),
-    minLength: 30,
-    maxLength: 40,
+    minLength: -1,
+    maxLength: -1,
     min: make(map[string]int),
     max: make(map[string]int),
     Exclude: "",
@@ -204,6 +204,14 @@ func (this *Generator) Generate() (string, error)  {
 
   if len(this.alphabets) == 0 {
     return "", errors.New("No alphabets defined.")
+  }
+
+  if this.minLength == -1 {
+    return "", errors.New("You must set a minimum length.")
+  }
+
+  if this.maxLength == -1 {
+    return "", errors.New("You must set a maximum length.")
   }
 
   alphabets := make(map[string]string)

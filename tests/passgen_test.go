@@ -21,11 +21,19 @@ func (s *PassgenSuite) TestEmptyGenerate(c *C) {
   c.Assert(err, NotNil)
 }
 
+func (s *PassgenSuite) TestNoLengthGenerate(c *C) {
+  g := passgen.New()
+  g.AddAlphabet("basic", "abc")
+  g.SetMinMax("basic", 0, 100)
+  _, err := g.Generate()
+  c.Assert(err, NotNil)
+}
+
 func (s *PassgenSuite) TestBasicGenerate(c *C) {
   g := passgen.New()
   g.AddAlphabet("basic", "abc")
-  g.SetLength(10, 10)
   g.SetMinMax("basic", 0, 100)
+  g.SetLength(10, 10)
   p, _ := g.Generate()
   c.Assert(len(p) > 0, Equals, true)
 }
