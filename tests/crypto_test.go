@@ -3,12 +3,7 @@ package tests
 import (
   "github.com/schmich/ward/crypto"
   . "gopkg.in/check.v1"
-  "testing"
 )
-
-func Test(t *testing.T) {
-  TestingT(t)
-}
 
 type CryptoSuite struct {
 }
