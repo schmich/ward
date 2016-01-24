@@ -54,23 +54,14 @@ func Open(fileName string, password string) (*Store, error) {
     return nil, errors.New("Invalid version.")
   }
 
-  if stretch < 1 {
-    return nil, errors.New("Invalid key stretch.")
-  }
-
-  if len(salt) < 64 {
-    return nil, errors.New("Invalid salt.")
-  }
-
-  if len(nonce) < 12 {
-    return nil, errors.New("Invalid nonce.")
-  }
-
   if len(sentinel) <= 0 {
     return nil, errors.New("Invalid sentinel.")
   }
 
-  cipher := crypto.LoadCipher(password, salt, stretch, nonce)
+  cipher, err := crypto.LoadCipher(password, salt, stretch, nonce)
+  if err != nil {
+    return nil, err
+  }
 
   _, err = cipher.TryDecrypt(sentinel)
   if err != nil {
@@ -84,10 +75,6 @@ func Open(fileName string, password string) (*Store, error) {
 }
 
 func createCipher(db *sql.DB, password string, keyStretch int) (*crypto.Cipher, error) {
-  if keyStretch < 1 {
-    return nil, errors.New("Key stretch must be at least 1.")
-  }
-
   const version = 1
 
   tx, err := db.Begin()
@@ -95,7 +82,10 @@ func createCipher(db *sql.DB, password string, keyStretch int) (*crypto.Cipher, 
     return nil, err
   }
 
-  cipher := crypto.NewCipher(password, keyStretch)
+  cipher, err := crypto.NewCipher(password, keyStretch)
+  if err != nil {
+    return nil, err
+  }
 
   delete, err := tx.Prepare("DELETE FROM settings")
   if err != nil {

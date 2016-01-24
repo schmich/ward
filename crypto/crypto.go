@@ -7,6 +7,7 @@ import (
   "crypto/aes"
   "crypto/rand"
   "math/big"
+  "errors"
 )
 
 type IncorrectPasswordError string
@@ -21,18 +22,34 @@ type Cipher struct {
   salt []byte
 }
 
-func LoadCipher(password string, salt []byte, stretch int, nonce []byte) *Cipher {
+func LoadCipher(password string, salt []byte, stretch int, nonce []byte) (*Cipher, error) {
+  if len(password) == 0 {
+    return nil, errors.New("Invalid password.")
+  }
+
+  if len(salt) < 64 {
+    return nil, errors.New("Invalid salt.")
+  }
+
+  if stretch < 1 {
+    return nil, errors.New("Key stretch must be at least 1.")
+  }
+
+  if len(nonce) < 12 {
+    return nil, errors.New("Invalid nonce.")
+  }
+
   passwordBuffer := []byte(password)
 
   derivedKey := pbkdf2.Key(passwordBuffer, salt, stretch, 32, sha3.New512)
   block, err := aes.NewCipher(derivedKey)
   if err != nil {
-    panic(err)
+    return nil, err
   }
 
   aead, err := gocipher.NewGCM(block)
   if err != nil {
-    panic(err)
+    return nil, err
   }
 
   nonceInt := big.NewInt(0)
@@ -42,25 +59,27 @@ func LoadCipher(password string, salt []byte, stretch int, nonce []byte) *Cipher
     aead: aead,
     nonce: nonceInt,
     salt: salt,
-  }
+  }, nil
 }
 
-func NewCipher(password string, stretch int) *Cipher {
+func NewCipher(password string, stretch int) (*Cipher, error) {
   salt := make([]byte, 64)
   count, err := rand.Read(salt)
-
   if err != nil {
-    panic(err)
+    return nil, err
   }
 
   if count != len(salt) {
-    panic("Failed to generate random salt.")
+    return nil, errors.New("Failed to generate random salt.")
   }
 
-  nonce := big.NewInt(0).Bytes()
-  cipher := LoadCipher(password, salt, stretch, nonce)
+  nonce := make([]byte, 12)
+  cipher, err := LoadCipher(password, salt, stretch, nonce)
+  if err != nil {
+    return nil, err
+  }
 
-  return cipher
+  return cipher, nil
 }
 
 func (cipher *Cipher) GetNonce() []byte {
