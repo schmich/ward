@@ -48,11 +48,6 @@ func (this *Generator) SetMinMax(name string, min, max int) {
   this.SetMax(name, max)
 }
 
-func (this *Generator) SetRange(name string, min, max int) {
-  this.SetMin(name, min)
-  this.SetMax(name, max)
-}
-
 func (generator *Generator) AddAlphabet(name string, alphabet string) {
   generator.alphabets[name] = alphabet
 }
