@@ -205,8 +205,11 @@ func randLengthResults(resultSet map[int]map[core.VarId]int, lengthVar core.VarI
 
 func (this *Generator) Generate() (string, error)  {
   // TODO: Handle errors:
-  // No alphabets defined
   // All alphabets excluded
+
+  if len(this.alphabets) == 0 {
+    return "", errors.New("No alphabets defined.")
+  }
 
   alphabets := make(map[string]string)
 
@@ -235,14 +238,19 @@ func (this *Generator) Generate() (string, error)  {
     parts = append(parts, intVar)
   }
 
-  sum := propagator.CreateSum(store, lengthVar, parts)
-  store.AddPropagator(sum)
+  if len(parts) >= 2 {
+    sum := propagator.CreateSum(store, lengthVar, parts)
+    store.AddPropagator(sum)
+  } else {
+    eq := propagator.CreateXplusCeqY(parts[0], 0, lengthVar)
+    store.AddPropagator(eq)
+  }
 
   query := labeling.CreateSearchAllQuery()
   solutionFound := labeling.Labeling(store, query, labeling.SmallestDomainFirst, labeling.InDomainMin)
 
   if !solutionFound {
-    return "", errors.New("Impossible to satisfy password constraints.")
+    return "", errors.New("Cannot satisfy password constraints.")
   }
 
   resultSet := query.GetResultSet()
