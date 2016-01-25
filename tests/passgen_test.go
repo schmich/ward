@@ -1,8 +1,8 @@
 package tests
 
 import (
-  "github.com/schmich/ward/passgen"
   . "gopkg.in/check.v1"
+  "github.com/schmich/ward/passgen"
 )
 
 type PassgenSuite struct {
@@ -15,25 +15,52 @@ func (s *PassgenSuite) TestNew(c *C) {
   c.Assert(g, NotNil)
 }
 
-func (s *PassgenSuite) TestEmptyGenerate(c *C) {
+func (s *PassgenSuite) TestEmptyError(c *C) {
   g := passgen.New()
   _, err := g.Generate()
   c.Assert(err, NotNil)
 }
 
-func (s *PassgenSuite) TestNoLengthGenerate(c *C) {
+func (s *PassgenSuite) TestNoLengthError(c *C) {
   g := passgen.New()
-  g.AddAlphabet("basic", "abc")
-  g.SetMinMax("basic", 0, 100)
+  abc := g.AddAlphabet("abc")
+  abc.SetMinMax(0, 100)
   _, err := g.Generate()
   c.Assert(err, NotNil)
 }
 
-func (s *PassgenSuite) TestBasicGenerate(c *C) {
+func (s *PassgenSuite) TestSingleCharGenerate(c *C) {
   g := passgen.New()
-  g.AddAlphabet("basic", "abc")
-  g.SetMinMax("basic", 0, 100)
-  g.SetLength(10, 10)
+  g.AddAlphabet("a")
+  g.SetLength(5, 5)
   p, _ := g.Generate()
-  c.Assert(len(p) > 0, Equals, true)
+  c.Assert(len(p), Equals, 5)
+  c.Assert(p, Equals, "aaaaa")
+}
+
+func (s *PassgenSuite) TestMultiCharGenerate(c *C) {
+  g := passgen.New()
+  abc := g.AddAlphabet("abc")
+  abc.SetMinMax(0, 100)
+  g.SetLength(10, 20)
+  p, _ := g.Generate()
+  c.Assert(p, Matches, "[abc]{10,20}")
+}
+
+func (s *PassgenSuite) TestMinError(c *C) {
+  g := passgen.New()
+  abc := g.AddAlphabet("abc")
+  abc.SetMin(100)
+  g.SetLength(10, 10)
+  _, err := g.Generate()
+  c.Assert(err, NotNil)
+}
+
+func (s *PassgenSuite) TestMaxError(c *C) {
+  g := passgen.New()
+  abc := g.AddAlphabet("abc")
+  abc.SetMax(1)
+  g.SetLength(10, 10)
+  _, err := g.Generate()
+  c.Assert(err, NotNil)
 }

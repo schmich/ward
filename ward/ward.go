@@ -465,30 +465,30 @@ func (app *App) Run(args []string) {
 
     cmd.Action = func() {
       generator := passgen.New()
-      generator.AddAlphabet("upper", "ABCDEFGHIJKLMNOPQRSTUVWXYZ")
-      generator.AddAlphabet("lower", "abcdefghijklmnopqrstuvwxyz")
-      generator.AddAlphabet("digit", "0123456789")
-      generator.AddAlphabet("symbol", "`~!@#$%^&*()-_=+[{]}\\|;:'\",<.>/?")
+      upper := generator.AddAlphabet("ABCDEFGHIJKLMNOPQRSTUVWXYZ")
+      lower := generator.AddAlphabet("abcdefghijklmnopqrstuvwxyz")
+      digit := generator.AddAlphabet("0123456789")
+      symbol := generator.AddAlphabet("`~!@#$%^&*()-_=+[{]}\\|;:'\",<.>/?")
       if *length == 0 {
         generator.SetLength(*minLength, *maxLength)
       } else {
         generator.SetLength(*length, *length)
       }
-      generator.SetMinMax("upper", *minUpper, *maxUpper)
-      generator.SetMinMax("lower", *minLower, *maxLower)
-      generator.SetMinMax("digit", *minNumeric, *maxNumeric)
-      generator.SetMinMax("symbol", *minSymbol, *maxSymbol)
+      upper.SetMinMax(*minUpper, *maxUpper)
+      lower.SetMinMax(*minLower, *maxLower)
+      digit.SetMinMax(*minNumeric, *maxNumeric)
+      symbol.SetMinMax(*minSymbol, *maxSymbol)
       if (*noUpper) {
-        generator.SetMinMax("upper", 0, 0)
+        upper.SetMinMax(0, 0)
       }
       if (*noLower) {
-        generator.SetMinMax("lower", 0, 0)
+        lower.SetMinMax(0, 0)
       }
       if (*noNumeric) {
-        generator.SetMinMax("digit", 0, 0)
+        digit.SetMinMax(0, 0)
       }
       if (*noSymbol) {
-        generator.SetMinMax("symbol", 0, 0)
+        symbol.SetMinMax(0, 0)
       }
       generator.Exclude = *exclude
       if (*noSimilar) {

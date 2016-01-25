@@ -6,50 +6,61 @@ import (
   "bitbucket.org/gofd/gofd/labeling"
   "crypto/rand"
   "math/big"
+  "strconv"
   "strings"
   "errors"
 )
 
+type Alphabet struct {
+  characters string
+  minCount int
+  maxCount int
+}
+
+func (this *Alphabet) SetMinMax(min, max int) {
+  this.SetMin(min)
+  this.SetMax(max)
+}
+
+func (this *Alphabet) SetMin(min int) {
+  this.minCount = min
+}
+
+func (this *Alphabet) SetMax(max int) {
+  this.maxCount = max
+}
+
 type Generator struct {
-  alphabets map[string]string
+  alphabets []*Alphabet
   minLength int
   maxLength int
-  min map[string]int
-  max map[string]int
   Exclude string
 }
 
 func New() *Generator {
   return &Generator {
-    alphabets: make(map[string]string),
+    alphabets: make([]*Alphabet, 0),
     minLength: -1,
     maxLength: -1,
-    min: make(map[string]int),
-    max: make(map[string]int),
     Exclude: "",
   }
+}
+
+func (this *Generator) AddAlphabet(characters string) *Alphabet {
+  alphabet := &Alphabet {
+    characters: characters,
+    minCount: -1,
+    maxCount: -1,
+  }
+
+  this.alphabets = append(this.alphabets, alphabet)
+
+  return alphabet
 }
 
 func (this *Generator) SetLength(min, max int) {
   this.minLength = min
   this.maxLength = max
-}
-
-func (this *Generator) SetMin(name string, min int) {
-  this.min[name] = min
-}
-
-func (this *Generator) SetMax(name string, max int) {
-  this.max[name] = max
-}
-
-func (this *Generator) SetMinMax(name string, min, max int) {
-  this.SetMin(name, min)
-  this.SetMax(name, max)
-}
-
-func (generator *Generator) AddAlphabet(name string, alphabet string) {
-  generator.alphabets[name] = alphabet
 }
 
 func randInt(low, high int) int {
@@ -143,7 +154,7 @@ func max(x, y int) int {
   }
 }
 
-func (this *Generator) resultWeight(result map[core.VarId]int, store *core.Store, length int, alphabets map[string]string) *big.Int {
+func (this *Generator) resultWeight(result map[core.VarId]int, store *core.Store, length int, alphabets map[string]*Alphabet) *big.Int {
   // weight = (length! * product(i=1,n | len(alphabet_n)^slots_n)) / (product(i=1,n | slots_n!)
 
   counts := make(map[string]int)
@@ -157,7 +168,7 @@ func (this *Generator) resultWeight(result map[core.VarId]int, store *core.Store
 
   for name, alphabet := range alphabets {
     count := counts[name]
-    opts := pow(len(alphabet), count)
+    opts := pow(len(alphabet.characters), count)
     num = num.Mul(num, opts)
     den = den.Mul(den, fac(count))
   }
@@ -199,8 +210,7 @@ func randLengthResults(resultSet map[int]map[core.VarId]int, lengthVar core.VarI
 }
 
 func (this *Generator) Generate() (string, error)  {
-  // TODO: Handle errors:
-  // All alphabets excluded
+  // TODO: Handle all characters excluded.
 
   if len(this.alphabets) == 0 {
     return "", errors.New("No alphabets defined.")
@@ -214,10 +224,14 @@ func (this *Generator) Generate() (string, error)  {
     return "", errors.New("You must set a maximum length.")
   }
 
-  alphabets := make(map[string]string)
+  alphabets := make(map[string]*Alphabet)
 
-  for name, alphabet := range this.alphabets {
-    alphabets[name] = exclude(alphabet, this.Exclude)
+  for i, alphabet := range this.alphabets {
+    alphabets[strconv.Itoa(i)] = &Alphabet {
+      characters: exclude(alphabet.characters, this.Exclude),
+      minCount: alphabet.minCount,
+      maxCount: alphabet.maxCount,
+    }
   }
 
   store := core.CreateStore()
@@ -225,19 +239,14 @@ func (this *Generator) Generate() (string, error)  {
 
   parts := make([]core.VarId, 0)
 
-  for name, _ := range alphabets {
-    var minVal, maxVal int
-    var ok bool
-
-    if minVal, ok = this.min[name]; !ok {
-      minVal = 0
+  for id, alphabet := range alphabets {
+    minCount := max(alphabet.minCount, 0)
+    maxCount := alphabet.maxCount
+    if maxCount == -1 {
+      maxCount = max(minCount, this.maxLength)
     }
 
-    if maxVal, ok = this.max[name]; !ok || (maxVal == -1) {
-      maxVal = max(minVal, this.maxLength)
-    }
-
-    intVar := core.CreateIntVarFromTo(name, store, minVal, maxVal)
+    intVar := core.CreateIntVarFromTo(id, store, minCount, maxCount)
     parts = append(parts, intVar)
   }
 
@@ -279,7 +288,7 @@ func (this *Generator) Generate() (string, error)  {
   bytes := make([]byte, 0)
   for name, count := range counts {
     if alphabet, ok := alphabets[name]; ok {
-      bytes = append(bytes, randBytes([]byte(alphabet), count)...)
+      bytes = append(bytes, randBytes([]byte(alphabet.characters), count)...)
     }
   }
 
