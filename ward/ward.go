@@ -42,13 +42,15 @@ func (app *App) printError(format string, args ...interface {}) {
 }
 
 func (app *App) readInput(prompt string) string {
-  fmt.Fprint(os.Stderr, color.CyanString(prompt))
+  fmt.Fprint(os.Stderr, prompt)
+  color.Set(color.FgHiBlack)
+  defer color.Unset()
   app.scanner.Scan()
   return app.scanner.Text()
 }
 
 func (app *App) readPassword(prompt string) string {
-  fmt.Fprint(os.Stderr, color.CyanString(prompt))
+  fmt.Fprint(os.Stderr, prompt)
   password, _ := terminal.ReadPassword(int(os.Stdin.Fd()))
   println()
   return string(password)
