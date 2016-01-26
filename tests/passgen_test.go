@@ -70,12 +70,12 @@ func (s *PassgenSuite) TestMultiAlphabet(c *C) {
   g := passgen.New()
   g.SetLength(8, 8)
   a := g.AddAlphabet("a")
-  a.SetMinMax(4, 4)
+  a.SetMinMax(3, 3)
   b := g.AddAlphabet("b")
-  b.SetMinMax(4, 4)
+  b.SetMinMax(5, 5)
   p, _ := g.Generate()
-  c.Assert(strings.Replace(p, "b", "", -1), Equals, "aaaa")
-  c.Assert(strings.Replace(p, "a", "", -1), Equals, "bbbb")
+  c.Assert(strings.Replace(p, "b", "", -1), Equals, "aaa")
+  c.Assert(strings.Replace(p, "a", "", -1), Equals, "bbbbb")
 }
 
 func (s *PassgenSuite) TestExclude(c *C) {
@@ -85,4 +85,15 @@ func (s *PassgenSuite) TestExclude(c *C) {
   g.Exclude = "bc"
   p, _ := g.Generate()
   c.Assert(p, Matches, "a{100}")
+}
+
+func (s *PassgenSuite) TestImpossibleConstraint(c *C) {
+  g := passgen.New()
+  g.SetLength(10, 10)
+  a := g.AddAlphabet("a")
+  a.SetMinMax(6, 10)
+  b := g.AddAlphabet("b")
+  b.SetMinMax(6, 10)
+  _, err := g.Generate()
+  c.Assert(err, NotNil)
 }
