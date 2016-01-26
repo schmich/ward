@@ -305,7 +305,7 @@ func (app *App) runDel(query []string) {
   app.printSuccess("Credential deleted.\n")
 }
 
-func (app *App) runExport(fileName string, indent bool) {
+func (app *App) runExport(fileName string, compact bool) {
   db := app.openStore()
   defer db.Close()
 
@@ -326,10 +326,10 @@ func (app *App) runExport(fileName string, indent bool) {
   credentials := db.AllCredentials()
 
   var jsonData []byte
-  if indent {
-    jsonData, err = json.MarshalIndent(credentials, "", "  ")
-  } else {
+  if compact {
     jsonData, err = json.Marshal(credentials)
+  } else {
+    jsonData, err = json.MarshalIndent(credentials, "", "  ")
   }
 
   if err != nil {
@@ -549,13 +549,13 @@ func (app *App) Run(args []string) {
   })
 
   ward.Command("export", "Export JSON-formatted credentials.", func(cmd *cli.Cmd) {
-    cmd.Spec = "[--indent] [FILE]"
+    cmd.Spec = "[--compact] [FILE]"
 
     file := cmd.StringArg("FILE", "", "Destination file. Otherwise, output written to stdout.")
-    indent := cmd.BoolOpt("indent", false, "Indent JSON output.")
+    compact := cmd.BoolOpt("compact", false, "Generate compact JSON output.")
 
     cmd.Action = func() {
-      app.runExport(*file, *indent)
+      app.runExport(*file, *compact)
     }
   })
 
