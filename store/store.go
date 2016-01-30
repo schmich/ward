@@ -7,6 +7,7 @@ import (
   "database/sql"
   "strings"
   "errors"
+  "fmt"
   "os"
 )
 
@@ -50,8 +51,8 @@ func Open(fileName string, password string) (*Store, error) {
   var version int
   rows.Scan(&salt, &stretch, &nonce, &sentinel, &version)
 
-  if version != 1 {
-    return nil, errors.New("Invalid version.")
+  if version > 1 {
+    return nil, errors.New(fmt.Sprintf("Unsupported version: %d.", version))
   }
 
   if len(sentinel) <= 0 {
