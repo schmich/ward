@@ -100,7 +100,7 @@ func (app *App) openStore() *store.Store {
   }
 }
 
-func (app *App) runAdd(login, realm, note string) {
+func (app *App) runAdd(login, realm, note string, copyPassword bool) {
   db := app.openStore()
   defer db.Close()
 
@@ -125,7 +125,14 @@ func (app *App) runAdd(login, realm, note string) {
     Note: note,
   })
 
-  app.printSuccess("Credential added.\n")
+  app.printSuccess("Credential added. ")
+
+  if copyPassword {
+    clipboard.WriteAll(password)
+    fmt.Println("Password copied to the clipboard.")
+  } else {
+    fmt.Println()
+  }
 }
 
 type passwordResult struct {
@@ -411,7 +418,7 @@ func (app *App) Run(args []string) {
   ward.Version("v version", "ward 0.0.1")
 
   ward.Command("init", "Create a new credential database.", func(cmd *cli.Cmd) {
-    cmd.Spec = "[--stretch|--link]"
+    cmd.Spec = "[--stretch|--link=<file>]"
 
     stretch := cmd.IntOpt("stretch", 200000, "Password key stretch iterations.")
     file := cmd.StringOpt("link", "", "Link to an existing credential database.")
@@ -425,28 +432,22 @@ func (app *App) Run(args []string) {
     }
   })
 
-  ward.Command("add", "Add a credential with a known password.", func(cmd *cli.Cmd) {
+  ward.Command("add", "Add a new credential.", func(cmd *cli.Cmd) {
+    cmd.Spec = "[--login] [--realm] [--note] [--no-copy] [--gen [--length] [--min-length] [--max-length] [--no-upper] [--no-lower] [--no-digit] [--no-symbol] [--no-similar] [--min-upper] [--max-upper] [--min-lower] [--max-lower] [--min-digit] [--max-digit] [--min-symbol] [--max-symbol] [--exclude]]"
+
     login := cmd.StringOpt("login", "", "Login for credential, e.g. username or email.")
     realm := cmd.StringOpt("realm", "", "Realm for credential, e.g. website or WiFi AP name.")
     note := cmd.StringOpt("note", "", "Note for credential.")
+    noCopy := cmd.BoolOpt("no-copy", false, "Do not copy password to the clipboard.")
 
-    cmd.Action = func() {
-      app.runAdd(*login, *realm, *note)
-    }
-  })
-
-  ward.Command("gen", "Add a credential with a generated password.", func(cmd *cli.Cmd) {
-    login := cmd.StringOpt("login", "", "Login for credential, e.g. username or email.")
-    realm := cmd.StringOpt("realm", "", "Realm for credential, e.g. website or WiFi AP name.")
-    note := cmd.StringOpt("note", "", "Note for credential.")
-
+    gen := cmd.BoolOpt("gen", false, "Generate a password.")
     length := cmd.IntOpt("length", 0, "Password length.")
     minLength := cmd.IntOpt("min-length", 30, "Minimum length password.")
     maxLength := cmd.IntOpt("max-length", 40, "Maximum length password.")
 
     noUpper := cmd.BoolOpt("no-upper", false, "Exclude uppercase characters in password.")
     noLower := cmd.BoolOpt("no-lower", false, "Exclude lowercase characters in password.")
-    noNumeric := cmd.BoolOpt("no-numeric", false, "Exclude numeric characters in password.")
+    noDigit := cmd.BoolOpt("no-digit", false, "Exclude digit characters in password.")
     noSymbol := cmd.BoolOpt("no-symbol", false, "Exclude symbol characters in password.")
     noSimilar := cmd.BoolOpt("no-similar", false, "Exclude similar characters in password.")
 
@@ -454,47 +455,49 @@ func (app *App) Run(args []string) {
     maxUpper := cmd.IntOpt("max-upper", -1, "Maximum number of uppercase characters in password.")
     minLower := cmd.IntOpt("min-lower", 0, "Minimum number of lowercase characters in password.")
     maxLower := cmd.IntOpt("max-lower", -1, "Maximum number of lowercase characters in password.")
-    minNumeric := cmd.IntOpt("min-numeric", 0, "Minimum number of numeric characters in password.")
-    maxNumeric := cmd.IntOpt("max-numeric", -1, "Maximum number of numeric characters in password.")
+    minDigit := cmd.IntOpt("min-digit", 0, "Minimum number of digit characters in password.")
+    maxDigit := cmd.IntOpt("max-digit", -1, "Maximum number of digit characters in password.")
     minSymbol := cmd.IntOpt("min-symbol", 0, "Minimum number of symbol characters in password.")
     maxSymbol := cmd.IntOpt("max-symbol", -1, "Maximum number of symbol characters in password.")
 
     exclude := cmd.StringOpt("exclude", "", "Exclude specific characters from password.")
 
-    noCopy := cmd.BoolOpt("no-copy", false, "Do not copy generated password to the clipboard.")
-
     cmd.Action = func() {
-      generator := passgen.New()
-      upper := generator.AddAlphabet("ABCDEFGHIJKLMNOPQRSTUVWXYZ")
-      lower := generator.AddAlphabet("abcdefghijklmnopqrstuvwxyz")
-      digit := generator.AddAlphabet("0123456789")
-      symbol := generator.AddAlphabet("`~!@#$%^&*()-_=+[{]}\\|;:'\",<.>/?")
-      if *length == 0 {
-        generator.SetLength(*minLength, *maxLength)
+      if !*gen {
+        app.runAdd(*login, *realm, *note, !*noCopy)
       } else {
-        generator.SetLength(*length, *length)
+        generator := passgen.New()
+        if *length == 0 {
+          generator.SetLength(*minLength, *maxLength)
+        } else {
+          generator.SetLength(*length, *length)
+        }
+        upper := generator.AddAlphabet("ABCDEFGHIJKLMNOPQRSTUVWXYZ")
+        lower := generator.AddAlphabet("abcdefghijklmnopqrstuvwxyz")
+        digit := generator.AddAlphabet("0123456789")
+        symbol := generator.AddAlphabet("`~!@#$%^&*()-_=+[{]}\\|;:'\",<.>/?")
+        upper.SetMinMax(*minUpper, *maxUpper)
+        lower.SetMinMax(*minLower, *maxLower)
+        digit.SetMinMax(*minDigit, *maxDigit)
+        symbol.SetMinMax(*minSymbol, *maxSymbol)
+        if (*noUpper) {
+          upper.SetMinMax(0, 0)
+        }
+        if (*noLower) {
+          lower.SetMinMax(0, 0)
+        }
+        if (*noDigit) {
+          digit.SetMinMax(0, 0)
+        }
+        if (*noSymbol) {
+          symbol.SetMinMax(0, 0)
+        }
+        generator.Exclude = *exclude
+        if (*noSimilar) {
+          generator.Exclude += "5SB8|1IiLl0Oo"
+        }
+        app.runGen(*login, *realm, *note, !*noCopy, generator)
       }
-      upper.SetMinMax(*minUpper, *maxUpper)
-      lower.SetMinMax(*minLower, *maxLower)
-      digit.SetMinMax(*minNumeric, *maxNumeric)
-      symbol.SetMinMax(*minSymbol, *maxSymbol)
-      if (*noUpper) {
-        upper.SetMinMax(0, 0)
-      }
-      if (*noLower) {
-        lower.SetMinMax(0, 0)
-      }
-      if (*noNumeric) {
-        digit.SetMinMax(0, 0)
-      }
-      if (*noSymbol) {
-        symbol.SetMinMax(0, 0)
-      }
-      generator.Exclude = *exclude
-      if (*noSimilar) {
-        generator.Exclude += "B8|1IiLl0Oo"
-      }
-      app.runGen(*login, *realm, *note, !*noCopy, generator)
     }
   })
 
