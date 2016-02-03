@@ -551,6 +551,14 @@ func (app *App) Run(args []string) {
     fmt.Println("show")
   })
 
+  ward.Command("import", "Import JSON-formatted credentials.", func(cmd *cli.Cmd) {
+    file := cmd.StringArg("FILE", "", "File to import.")
+
+    cmd.Action = func() {
+      app.runImport(*file)
+    }
+  })
+
   ward.Command("export", "Export JSON-formatted credentials.", func(cmd *cli.Cmd) {
     cmd.Spec = "[--compact] [FILE]"
 
@@ -559,14 +567,6 @@ func (app *App) Run(args []string) {
 
     cmd.Action = func() {
       app.runExport(*file, *compact)
-    }
-  })
-
-  ward.Command("import", "Import JSON-formatted credentials.", func(cmd *cli.Cmd) {
-    file := cmd.StringArg("FILE", "", "File to import.")
-
-    cmd.Action = func() {
-      app.runImport(*file)
     }
   })
 
