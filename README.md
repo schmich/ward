@@ -8,6 +8,8 @@ Ward stores your passwords in an encrypted file which you manage with a single m
 
 [Download the zero-install binary on the releases page.](https://github.com/schmich/ward/releases)
 
+From source: `go install github.com/schmich/ward/...`
+
 # Usage
 
     Usage: ward [OPTIONS] COMMAND [arg...]
