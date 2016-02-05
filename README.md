@@ -63,7 +63,7 @@ Add a new credential with a generated password:
     Note: Twitter account
     ✓ Credential added. Generated password copied to the clipboard.
 
-Copy an existing password:
+Copy an existing password with partial string matching:
 
     > ward copy linked
     Master password:
