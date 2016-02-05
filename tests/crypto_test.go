@@ -10,65 +10,92 @@ type CryptoSuite struct {
 
 var _ = Suite(&CryptoSuite{})
 
-func (s *CryptoSuite) TestNew(c *C) {
-  cipher, _ := crypto.NewCipher("pass", 1)
-  c.Assert(cipher, NotNil)
-  cipher, _ = crypto.NewCipher("pass", 5000)
-  c.Assert(cipher, NotNil)
-  cipher, _ = crypto.NewCipher("", 1)
-  c.Assert(cipher, IsNil)
-  cipher, _ = crypto.NewCipher("pass", 0)
-  c.Assert(cipher, IsNil)
+func (s *CryptoSuite) TestNewKey(c *C) {
+  key, _ := crypto.NewKey()
+  c.Assert(key, NotNil)
 }
 
-func (s *CryptoSuite) TestLoad(c *C) {
-  cipher, _ := crypto.LoadCipher("pass", make([]byte, 64), 1, make([]byte, 12))
+func (s *CryptoSuite) TestNewPasswordKey(c *C) {
+  key, salt, err := crypto.NewPasswordKey("pass", 1)
+  c.Assert(key, NotNil)
+  c.Assert(salt, NotNil)
+  c.Assert(err, IsNil)
+  key, salt, err = crypto.NewPasswordKey("pass", 100)
+  c.Assert(key, NotNil)
+  c.Assert(salt, NotNil)
+  c.Assert(err, IsNil)
+}
+
+func (s *CryptoSuite) TestNewPasswordKeyFail(c *C) {
+  key, salt, err := crypto.NewPasswordKey("", 1)
+  c.Assert(key, IsNil)
+  c.Assert(salt, IsNil)
+  c.Assert(err, NotNil)
+  key, salt, err = crypto.NewPasswordKey("pass", 0)
+  c.Assert(key, IsNil)
+  c.Assert(salt, IsNil)
+  c.Assert(err, NotNil)
+}
+
+func (s *CryptoSuite) TestLoadPasswordKey(c *C) {
+  salt := make([]byte, 64)
+  key, err := crypto.LoadPasswordKey("pass", salt, 1)
+  c.Assert(key, NotNil)
+  c.Assert(err, IsNil)
+}
+
+func (s *CryptoSuite) TestNewLoadPasswordKey(c *C) {
+  password := "pass"
+  stretch := 1
+  newKey, salt, _ := crypto.NewPasswordKey(password, stretch)
+  loadKey, _ := crypto.LoadPasswordKey(password, salt, stretch)
+  c.Assert(newKey, DeepEquals, loadKey)
+}
+
+func (s *CryptoSuite) TestNewCipher(c *C) {
+  key, _ := crypto.NewKey()
+  cipher, err := crypto.NewCipher(key)
   c.Assert(cipher, NotNil)
-  cipher, _ = crypto.LoadCipher("pass", make([]byte, 64), 5000, make([]byte, 12))
+  c.Assert(err, IsNil)
+}
+
+func (s *CryptoSuite) TestNewCipherFail(c *C) {
+  cipher, err := crypto.NewCipher([]byte{})
+  c.Assert(cipher, IsNil)
+  c.Assert(err, NotNil)
+}
+
+func (s *CryptoSuite) TestLoadCipher(c *C) {
+  key, _ := crypto.NewKey()
+  nonce := make([]byte, 12)
+  cipher, err := crypto.LoadCipher(key, nonce)
   c.Assert(cipher, NotNil)
-  cipher, _ = crypto.LoadCipher("", make([]byte, 64), 1, make([]byte, 12))
-  c.Assert(cipher, IsNil)
-  cipher, _ = crypto.LoadCipher("pass", nil, 1, make([]byte, 12))
-  c.Assert(cipher, IsNil)
-  cipher, _ = crypto.LoadCipher("pass", []byte{}, 1, make([]byte, 12))
-  c.Assert(cipher, IsNil)
-  cipher, _ = crypto.LoadCipher("pass", make([]byte, 64), 0, make([]byte, 12))
-  c.Assert(cipher, IsNil)
-  cipher, _ = crypto.LoadCipher("pass", make([]byte, 64), 1, nil)
-  c.Assert(cipher, IsNil)
-  cipher, _ = crypto.LoadCipher("pass", make([]byte, 64), 1, []byte{})
-  c.Assert(cipher, IsNil)
+  c.Assert(err, IsNil)
+}
+
+func (s *CryptoSuite) TestNewLoadCipher(c *C) {
+  key, _ := crypto.NewKey()
+  newCipher, _ := crypto.NewCipher(key)
+  loadCipher, _ := crypto.LoadCipher(key, newCipher.GetNonce())
+  c.Assert(loadCipher, NotNil)
+  c.Assert(loadCipher.GetNonce(), DeepEquals, newCipher.GetNonce())
 }
 
 func (s *CryptoSuite) TestGetNonce(c *C) {
-  cipher, _ := crypto.NewCipher("pass", 1)
+  key, _ := crypto.NewKey()
+  cipher, _ := crypto.NewCipher(key)
   nonce := cipher.GetNonce()
-  c.Assert(len(nonce), Equals, 12)
-}
-
-func (s *CryptoSuite) TestGetSalt(c *C) {
-  cipher, _ := crypto.NewCipher("pass", 1)
-  salt := cipher.GetSalt()
-  c.Assert(len(salt), Equals, 64)
-}
-
-func (s *CryptoSuite) TestNewLoad(c *C) {
-  password := "pass"
-  stretch := 1
-  cipher, _ := crypto.NewCipher(password, stretch)
-  nonce := cipher.GetNonce()
-  salt := cipher.GetSalt()
-  cipher, _ = crypto.LoadCipher(password, salt, stretch, nonce)
-  c.Assert(cipher, NotNil)
+  c.Assert(nonce, NotNil)
 }
 
 func (s *CryptoSuite) TestEncrypt(c *C) {
-  cipher, _ := crypto.NewCipher("pass", 1)
-  salt := cipher.GetSalt()
+  key, _ := crypto.NewKey()
+  cipher, _ := crypto.NewCipher(key)
   nonce0 := cipher.GetNonce()
   plaintext := []byte { 1, 2, 3, 4, 5 }
   ciphertext1 := cipher.Encrypt(plaintext)
   nonce1 := cipher.GetNonce()
+  c.Assert(ciphertext1, NotNil)
   c.Assert(len(ciphertext1), Not(Equals), 0)
   c.Assert(ciphertext1, Not(DeepEquals), plaintext)
   c.Assert(nonce0, Not(DeepEquals), nonce1)
@@ -77,30 +104,38 @@ func (s *CryptoSuite) TestEncrypt(c *C) {
   c.Assert(ciphertext2, Not(DeepEquals), plaintext)
   c.Assert(ciphertext2, Not(DeepEquals), ciphertext1)
   c.Assert(nonce1, Not(DeepEquals), nonce2)
-  c.Assert(salt, DeepEquals, cipher.GetSalt())
 }
 
-func (s *CryptoSuite) TestEncryptDecrypt(c *C) {
-  password := "pass"
-  stretch := 1
-  encipher, _ := crypto.NewCipher(password, stretch)
+func (s *CryptoSuite) TestTryDecrypt(c *C) {
+  key, _ := crypto.NewKey()
+  cipher, _ := crypto.NewCipher(key)
+  plaintext := []byte { 1, 2, 3, 4, 5 }
+  ciphertext := cipher.Encrypt(plaintext)
+  plaintextVerify, err := cipher.TryDecrypt(ciphertext)
+  c.Assert(err, IsNil)
+  c.Assert(plaintextVerify, NotNil)
+  c.Assert(plaintextVerify, DeepEquals, plaintext)
+}
+
+func (s *CryptoSuite) TestTryDecryptFail(c *C) {
+  key, _ := crypto.NewKey()
+  encipher, _ := crypto.NewCipher(key)
   plaintext := []byte { 1, 2, 3, 4, 5 }
   ciphertext := encipher.Encrypt(plaintext)
-  salt := encipher.GetSalt()
-  nonce := encipher.GetNonce()
-  decipher, _ := crypto.LoadCipher(password, salt, stretch, nonce)
+  newKey, _ := crypto.NewKey()
+  decipher, _ := crypto.LoadCipher(newKey, encipher.GetNonce())
+  plaintextVerify, err := decipher.TryDecrypt(ciphertext)
+  c.Assert(err, NotNil)
+  c.Assert(len(plaintextVerify), Equals, 0)
+}
+
+func (s *CryptoSuite) TestDecrypt(c *C) {
+  key, _ := crypto.NewKey()
+  encipher, _ := crypto.NewCipher(key)
+  plaintext := []byte { 1, 2, 3, 4, 5 }
+  ciphertext := encipher.Encrypt(plaintext)
+  decipher, _ := crypto.LoadCipher(key, encipher.GetNonce())
   plaintextVerify := decipher.Decrypt(ciphertext)
-  c.Assert(plaintext, DeepEquals, plaintextVerify)
-}
-
-func (s *CryptoSuite) TestEncryptBadDecrypt(c *C) {
-  encipher, _ := crypto.NewCipher("pass", 1)
-  plaintext := []byte { 1, 2, 3, 4, 5 }
-  ciphertext := encipher.Encrypt(plaintext)
-  decipher, _ := crypto.NewCipher("wrongpass", 1)
-  _, err := decipher.TryDecrypt(ciphertext)
-  c.Assert(err, NotNil)
-  decipher, _ = crypto.NewCipher("pass", 100)
-  _, err = decipher.TryDecrypt(ciphertext)
-  c.Assert(err, NotNil)
+  c.Assert(plaintextVerify, NotNil)
+  c.Assert(plaintextVerify, DeepEquals, plaintext)
 }

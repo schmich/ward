@@ -3,7 +3,10 @@ package tests
 import (
   "github.com/schmich/ward/store"
   . "gopkg.in/check.v1"
+  "path/filepath"
   "strconv"
+  "io/ioutil"
+  "os"
 )
 
 type StoreSuite struct {
@@ -144,10 +147,16 @@ func (s *StoreSuite) TestDeleteCredential(c *C) {
   c.Assert(len(credentials), Equals, 0)
 }
 
+func tempFileName() string {
+  tempDir, _ := ioutil.TempDir(os.TempDir(), "ward")
+  return filepath.Join(tempDir, "ward")
+}
+
 func (s *StoreSuite) TestUpdateMasterPassword(c *C) {
-  db, _ := store.Create(":memory:", "pass", 1)
+  fileName := tempFileName()
+  db, _ := store.Create(fileName, "pass", 1)
   credentials := make(map[string]*store.Credential, 100)
-  for i := 0; i < len(credentials); i++ {
+  for i := 0; i < 100; i++ {
     login := strconv.Itoa(i)
     credentials[login] = &store.Credential {
       Login: login,
@@ -159,6 +168,8 @@ func (s *StoreSuite) TestUpdateMasterPassword(c *C) {
   }
   c.Assert(len(db.AllCredentials()), Equals, len(credentials))
   db.UpdateMasterPassword("newpass", 100)
+  db.Close()
+  db, _ = store.Open(fileName, "newpass")
   newCredentials := db.AllCredentials()
   c.Assert(len(newCredentials), Equals, len(credentials))
   for _, credential := range newCredentials {

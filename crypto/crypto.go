@@ -19,10 +19,42 @@ func (s IncorrectPasswordError) Error() string {
 type Cipher struct {
   aead gocipher.AEAD
   nonce *big.Int
-  salt []byte
 }
 
-func LoadCipher(password string, salt []byte, stretch int, nonce []byte) (*Cipher, error) {
+func NewKey() ([]byte, error) {
+  key := make([]byte, aes.BlockSize)
+  count, err := rand.Read(key)
+  if err != nil {
+    return nil, err
+  }
+
+  if count != len(key) {
+    return nil, errors.New("Failed to generate random key.")
+  }
+
+  return key, nil
+}
+
+func NewPasswordKey(password string, stretch int) ([]byte, []byte, error) {
+  salt := make([]byte, 64)
+  count, err := rand.Read(salt)
+  if err != nil {
+    return nil, nil, err
+  }
+
+  if count != len(salt) {
+    return nil, nil, errors.New("Failed to generate random salt.")
+  }
+
+  key, err := LoadPasswordKey(password, salt, stretch)
+  if err != nil {
+    return nil, nil, err
+  }
+
+  return key, salt, err
+}
+
+func LoadPasswordKey(password string, salt []byte, stretch int) ([]byte, error) {
   if len(password) == 0 {
     return nil, errors.New("Invalid password.")
   }
@@ -35,14 +67,29 @@ func LoadCipher(password string, salt []byte, stretch int, nonce []byte) (*Ciphe
     return nil, errors.New("Key stretch must be at least 1.")
   }
 
+  return pbkdf2.Key([]byte(password), salt, stretch, aes.BlockSize, sha3.New512), nil
+}
+
+func NewCipher(key []byte) (*Cipher, error) {
+  nonce := make([]byte, 12)
+  cipher, err := LoadCipher(key, nonce)
+  if err != nil {
+    return nil, err
+  }
+
+  return cipher, nil
+}
+
+func LoadCipher(key, nonce []byte) (*Cipher, error) {
+  if len(key) != aes.BlockSize {
+    return nil, errors.New("Invalid key.")
+  }
+
   if len(nonce) < 12 {
     return nil, errors.New("Invalid nonce.")
   }
 
-  passwordBuffer := []byte(password)
-
-  derivedKey := pbkdf2.Key(passwordBuffer, salt, stretch, 32, sha3.New512)
-  block, err := aes.NewCipher(derivedKey)
+  block, err := aes.NewCipher(key)
   if err != nil {
     return nil, err
   }
@@ -58,28 +105,7 @@ func LoadCipher(password string, salt []byte, stretch int, nonce []byte) (*Ciphe
   return &Cipher {
     aead: aead,
     nonce: nonceInt,
-    salt: salt,
   }, nil
-}
-
-func NewCipher(password string, stretch int) (*Cipher, error) {
-  salt := make([]byte, 64)
-  count, err := rand.Read(salt)
-  if err != nil {
-    return nil, err
-  }
-
-  if count != len(salt) {
-    return nil, errors.New("Failed to generate random salt.")
-  }
-
-  nonce := make([]byte, 12)
-  cipher, err := LoadCipher(password, salt, stretch, nonce)
-  if err != nil {
-    return nil, err
-  }
-
-  return cipher, nil
 }
 
 func (cipher *Cipher) GetNonce() []byte {
@@ -87,10 +113,6 @@ func (cipher *Cipher) GetNonce() []byte {
   nonce := make([]byte, cipher.aead.NonceSize())
   copy(nonce[len(nonce) - len(nonceBytes):], nonceBytes)
   return nonce
-}
-
-func (cipher *Cipher) GetSalt() []byte {
-  return cipher.salt
 }
 
 func (cipher *Cipher) Encrypt(plaintext []byte) []byte {

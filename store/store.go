@@ -3,7 +3,6 @@ package store
 import (
   "github.com/schmich/ward/crypto"
   _ "github.com/mattn/go-sqlite3"
-  "crypto/rand"
   "database/sql"
   "strings"
   "errors"
@@ -13,7 +12,8 @@ import (
 
 type Store struct {
   db *sql.DB
-  cipher *crypto.Cipher
+  passwordCipher *crypto.Cipher
+  keyCipher *crypto.Cipher
 }
 
 type Credential struct {
@@ -34,7 +34,11 @@ func Open(fileName string, password string) (*Store, error) {
     return nil, err
   }
 
-  query := "SELECT salt, stretch, nonce, sentinel, version FROM settings"
+  query := `
+    SELECT password_salt, password_stretch, password_nonce, encrypted_key, key_nonce, version
+    FROM settings
+  `
+
   rows, err := db.Query(query)
   if err != nil {
     return nil, err
@@ -44,88 +48,99 @@ func Open(fileName string, password string) (*Store, error) {
 
   rows.Next()
 
-  var salt []byte
-  var stretch int
-  var nonce []byte
-  var sentinel []byte
-  var version int
-  rows.Scan(&salt, &stretch, &nonce, &sentinel, &version)
+  var passwordSalt, passwordNonce, encryptedKey, keyNonce []byte
+  var passwordStretch, version int
+  rows.Scan(&passwordSalt, &passwordStretch, &passwordNonce, &encryptedKey, &keyNonce, &version)
 
   if version > 1 {
     return nil, errors.New(fmt.Sprintf("Unsupported version: %d.", version))
   }
 
-  if len(sentinel) <= 0 {
-    return nil, errors.New("Invalid sentinel.")
+  if len(encryptedKey) <= 0 {
+    return nil, errors.New("Invalid key.")
   }
 
-  cipher, err := crypto.LoadCipher(password, salt, stretch, nonce)
+  passwordKey, err := crypto.LoadPasswordKey(password, passwordSalt, passwordStretch)
+  passwordCipher, err := crypto.LoadCipher(passwordKey, passwordNonce)
   if err != nil {
     return nil, err
   }
 
-  _, err = cipher.TryDecrypt(sentinel)
+  key := passwordCipher.Decrypt(encryptedKey)
+
+  keyCipher, err := crypto.LoadCipher(key, keyNonce)
   if err != nil {
     return nil, err
   }
 
   return &Store {
     db: db,
-    cipher: cipher,
+    passwordCipher: passwordCipher,
+    keyCipher: keyCipher,
   }, nil
 }
 
-func createCipher(db *sql.DB, password string, keyStretch int) (*crypto.Cipher, error) {
+func createCipher(db *sql.DB, password string, passwordStretch int) (*crypto.Cipher, *crypto.Cipher, error) {
   const version = 1
 
   tx, err := db.Begin()
   if err != nil {
-    return nil, err
+    return nil, nil, err
   }
 
-  cipher, err := crypto.NewCipher(password, keyStretch)
+  defer func() {
+    if err != nil {
+      tx.Rollback()
+    } else {
+      tx.Commit()
+    }
+  }()
+
+  passwordKey, passwordSalt, err := crypto.NewPasswordKey(password, passwordStretch)
   if err != nil {
-    return nil, err
+    return nil, nil, err
   }
 
-  delete, err := tx.Prepare("DELETE FROM settings")
+  passwordCipher, err := crypto.NewCipher(passwordKey)
   if err != nil {
-    return nil, err
+    return nil, nil, err
   }
 
-  defer delete.Close()
-  delete.Exec()
+  key, err := crypto.NewKey()
+  if err != nil {
+    return nil, nil, err
+  }
+
+  keyCipher, err := crypto.NewCipher(key)
+  if err != nil {
+    return nil, nil, err
+  }
 
   insert, err := tx.Prepare(`
-    INSERT INTO settings (salt, stretch, nonce, sentinel, version)
-    VALUES (?, ?, ?, ?, ?)
+    INSERT INTO settings (password_salt, password_stretch, password_nonce, encrypted_key, key_nonce, version)
+    VALUES (?, ?, ?, ?, ?, ?)
   `)
 
   if err != nil {
-    return nil, err
+    return nil, nil, err
   }
 
   defer insert.Close()
 
-  sentinel := make([]byte, 16)
-  _, err = rand.Read(sentinel)
-  if err != nil {
-    return nil, err
-  }
+  encryptedKey := passwordCipher.Encrypt(key)
 
   insert.Exec(
-    cipher.GetSalt(),
-    keyStretch,
-    cipher.GetNonce(),
-    cipher.Encrypt(sentinel),
+    passwordSalt,
+    passwordStretch,
+    passwordCipher.GetNonce(),
+    encryptedKey,
+    keyCipher.GetNonce(),
     version)
 
-  tx.Commit()
-
-  return cipher, nil
+  return passwordCipher, keyCipher, nil
 }
 
-func Create(fileName string, password string, keyStretch int) (*Store, error) {
+func Create(fileName string, password string, passwordStretch int) (*Store, error) {
   if _, err := os.Stat(fileName); err == nil {
     return nil, errors.New("Credential database already exists.")
   }
@@ -152,10 +167,11 @@ func Create(fileName string, password string, keyStretch int) (*Store, error) {
     );
 
     CREATE TABLE settings (
-      salt BLOB,
-      stretch INTEGER,
-      nonce BLOB,
-      sentinel BLOB,
+      password_salt BLOB,
+      password_stretch INTEGER,
+      password_nonce BLOB,
+      encrypted_key BLOB,
+      key_nonce BLOB,
       version INTEGER
     );
 	`
@@ -165,59 +181,76 @@ func Create(fileName string, password string, keyStretch int) (*Store, error) {
     return nil, err
   }
 
-  cipher, err := createCipher(db, password, keyStretch)
+  passwordCipher, keyCipher, err := createCipher(db, password, passwordStretch)
   if err != nil {
     return nil, err
   }
 
   return &Store {
     db: db,
-    cipher: cipher,
+    passwordCipher: passwordCipher,
+    keyCipher: keyCipher,
   }, nil
 }
 
-func (store *Store) updateNonce(nonce []byte, tx *sql.Tx) {
-  update, err := tx.Prepare("UPDATE settings SET nonce = ?")
+func (store *Store) updateNonce(passwordNonce, keyNonce []byte, tx *sql.Tx) error {
+  update, err := tx.Prepare("UPDATE settings SET password_nonce=?, key_nonce=?")
   if err != nil {
-    panic(err)
+    return err
   }
 
   defer update.Close()
 
-  update.Exec(nonce)
+  update.Exec(passwordNonce, keyNonce)
+
+  return nil
 }
 
-func (store *Store) update(updateFn func(*sql.Tx)) {
+func (store *Store) update(updateFn func(*sql.Tx) error) error {
   tx, err := store.db.Begin()
   if err != nil {
-    panic(err)
+    return err
   }
 
-  updateFn(tx)
-  store.updateNonce(store.cipher.GetNonce(), tx)
+  defer func() {
+    if err != nil {
+      tx.Rollback()
+    } else {
+      tx.Commit()
+    }
+  }()
 
-  tx.Commit()
+  if err = updateFn(tx); err != nil {
+    return err
+  }
+
+  return store.updateNonce(
+    store.passwordCipher.GetNonce(),
+    store.keyCipher.GetNonce(),
+    tx)
 }
 
 func (store *Store) AddCredential(credential *Credential) {
-  store.update(func(tx *sql.Tx) {
+  store.update(func(tx *sql.Tx) error {
     insert, err := tx.Prepare(`
       INSERT INTO credentials (login, password, realm, note)
       VALUES (?, ?, ?, ?)
     `)
 
     if err != nil {
-      panic(err)
+      return err
     }
 
     defer insert.Close()
 
     insert.Exec(
-      store.cipher.Encrypt([]byte(credential.Login)),
-      store.cipher.Encrypt([]byte(credential.Password)),
-      store.cipher.Encrypt([]byte(credential.Realm)),
-      store.cipher.Encrypt([]byte(credential.Note)),
+      store.keyCipher.Encrypt([]byte(credential.Login)),
+      store.keyCipher.Encrypt([]byte(credential.Password)),
+      store.keyCipher.Encrypt([]byte(credential.Realm)),
+      store.keyCipher.Encrypt([]byte(credential.Note)),
     )
+
+    return nil
   })
 }
 
@@ -228,7 +261,8 @@ func (store *Store) eachCredential() chan *Credential {
     defer close(yield)
 
     rows, err := store.db.Query(`
-      SELECT id, login, password, realm, note FROM credentials
+      SELECT id, login, password, realm, note
+      FROM credentials
     `)
 
     if err != nil {
@@ -244,10 +278,10 @@ func (store *Store) eachCredential() chan *Credential {
 
       credential := &Credential {
         id: id,
-        Login: string(store.cipher.Decrypt(cipherLogin)),
-        Password: string(store.cipher.Decrypt(cipherPassword)),
-        Realm: string(store.cipher.Decrypt(cipherRealm)),
-        Note: string(store.cipher.Decrypt(cipherNote)),
+        Login: string(store.keyCipher.Decrypt(cipherLogin)),
+        Password: string(store.keyCipher.Decrypt(cipherPassword)),
+        Realm: string(store.keyCipher.Decrypt(cipherRealm)),
+        Note: string(store.keyCipher.Decrypt(cipherNote)),
       }
 
       yield <- credential
@@ -299,7 +333,7 @@ func (store *Store) UpdateCredential(credential *Credential) {
     panic("Invalid credential ID.")
   }
 
-  store.update(func(tx *sql.Tx) {
+  store.update(func(tx *sql.Tx) error {
     update, err := tx.Prepare(`
       UPDATE credentials
       SET login=?, password=?, realm=?, note=?
@@ -307,18 +341,20 @@ func (store *Store) UpdateCredential(credential *Credential) {
     `)
 
     if err != nil {
-      panic(err)
+      return err
     }
 
     defer update.Close()
 
     update.Exec(
-      store.cipher.Encrypt([]byte(credential.Login)),
-      store.cipher.Encrypt([]byte(credential.Password)),
-      store.cipher.Encrypt([]byte(credential.Realm)),
-      store.cipher.Encrypt([]byte(credential.Note)),
+      store.keyCipher.Encrypt([]byte(credential.Login)),
+      store.keyCipher.Encrypt([]byte(credential.Password)),
+      store.keyCipher.Encrypt([]byte(credential.Realm)),
+      store.keyCipher.Encrypt([]byte(credential.Note)),
       credential.id,
     )
+
+    return nil
   })
 }
 
@@ -327,35 +363,68 @@ func (store *Store) DeleteCredential(credential *Credential) {
     panic("Invalid credential ID.")
   }
 
-  store.update(func(tx *sql.Tx) {
+  store.update(func(tx *sql.Tx) error {
     delete, err := tx.Prepare("DELETE FROM credentials WHERE id=?")
     if err != nil {
-      panic(err)
+      return err
     }
 
     defer delete.Close()
 
     delete.Exec(credential.id)
+
+    return nil
   })
 }
 
-func (store *Store) UpdateMasterPassword(password string, keyStretch int) error {
-  newCipher, err := createCipher(store.db, password, keyStretch)
-  if err != nil {
-    return err
-  }
+func (store *Store) UpdateMasterPassword(password string, passwordStretch int) error {
+  return store.update(func(tx *sql.Tx) error {
+    query := "SELECT encrypted_key FROM settings"
 
-  credentials := store.AllCredentials()
-
-  store.cipher = newCipher
-
-  store.update(func(tx *sql.Tx) {
-    for _, credential := range credentials {
-      store.UpdateCredential(credential)
+    rows, err := tx.Query(query)
+    if err != nil {
+      return err
     }
-  })
 
-  return nil
+    defer rows.Close()
+    rows.Next()
+
+    var encryptedKey []byte
+    rows.Scan(&encryptedKey)
+
+    key := store.passwordCipher.Decrypt(encryptedKey)
+
+    passwordKey, passwordSalt, err := crypto.NewPasswordKey(password, passwordStretch)
+    if err != nil {
+      return err
+    }
+
+    passwordCipher, err := crypto.NewCipher(passwordKey)
+    if err != nil {
+      return err
+    }
+
+    update, err := tx.Prepare(`
+      UPDATE settings
+      SET password_salt=?, password_stretch=?, password_nonce=?, encrypted_key=?
+    `)
+
+    if err != nil {
+      return err
+    }
+
+    defer update.Close()
+
+    update.Exec(
+      passwordSalt,
+      passwordStretch,
+      passwordCipher.GetNonce(),
+      passwordCipher.Encrypt(key))
+
+    store.passwordCipher = passwordCipher
+
+    return nil
+  })
 }
 
 func (store *Store) Close() {
