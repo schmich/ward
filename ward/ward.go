@@ -95,7 +95,9 @@ func (app *App) openStore() *store.Store {
     app.printError("%s\n", err)
 
     if _, ok := err.(crypto.IncorrectPasswordError); !ok {
-      os.Exit(1)
+      if _, ok = err.(crypto.InvalidPasswordError); !ok {
+        os.Exit(1)
+      }
     }
   }
 }

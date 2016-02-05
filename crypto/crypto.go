@@ -16,6 +16,12 @@ func (s IncorrectPasswordError) Error() string {
   return "Incorrect password."
 }
 
+type InvalidPasswordError string
+
+func (s InvalidPasswordError) Error() string {
+  return "Invalid password."
+}
+
 type Cipher struct {
   aead gocipher.AEAD
   nonce *big.Int
@@ -53,7 +59,8 @@ func NewPasswordKey(password string, stretch int) ([]byte, []byte, error) {
 
 func LoadPasswordKey(password string, salt []byte, stretch int) ([]byte, error) {
   if len(password) == 0 {
-    return nil, errors.New("Invalid password.")
+    var e InvalidPasswordError
+    return nil, e
   }
 
   if len(salt) < 64 {

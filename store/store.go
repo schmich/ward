@@ -57,16 +57,23 @@ func Open(fileName string, password string) (*Store, error) {
   }
 
   if len(encryptedKey) <= 0 {
-    return nil, errors.New("Invalid key.")
+    return nil, errors.New("Invalid encrypted key.")
   }
 
   passwordKey, err := crypto.LoadPasswordKey(password, passwordSalt, passwordStretch)
+  if err != nil {
+    return nil, err
+  }
+
   passwordCipher, err := crypto.LoadCipher(passwordKey, passwordNonce)
   if err != nil {
     return nil, err
   }
 
-  key := passwordCipher.Decrypt(encryptedKey)
+  key, err := passwordCipher.TryDecrypt(encryptedKey)
+  if err != nil {
+    return nil, err
+  }
 
   keyCipher, err := crypto.LoadCipher(key, keyNonce)
   if err != nil {
