@@ -89,6 +89,40 @@ Import JSON credentials:
     Importing 192 credentials.
     ✓ Imported credentials from credentials.json.
 
+# Password Generator
+
+Ward comes with a constraint-solving password generator that you can use when adding a new credential (`ward add --gen`). You can control length, character requirements, and exclusions:
+
+    > ward add --help
+    
+    Usage: ward add [--login] [--realm] [--note] [--no-copy] [--gen [--length] [--min-length] [--max-length] [--no-upper] [--no-lower] [--no-digit] [--no-symbol] [--no-similar] [--min-upper] [--max-upper] [--min-lower] [--max-lower] [--min-digit] [--max-digit] [--min-symbol] [--max-symbol] [--exclude]]
+    
+    Add a new credential.
+    
+    Options:
+      --login=""           Login for credential, e.g. username or email.
+      --realm=""           Realm for credential, e.g. website or WiFi AP name.
+      --note=""            Note for credential.
+      --no-copy=false      Do not copy password to the clipboard.
+      --gen=false          Generate a password.
+      --length=0           Password length.
+      --min-length=30      Minimum length password.
+      --max-length=40      Maximum length password.
+      --no-upper=false     Exclude uppercase characters in password.
+      --no-lower=false     Exclude lowercase characters in password.
+      --no-digit=false     Exclude digit characters in password.
+      --no-symbol=false    Exclude symbol characters in password.
+      --no-similar=false   Exclude similar characters in password.
+      --min-upper=0        Minimum number of uppercase characters in password.
+      --max-upper=-1       Maximum number of uppercase characters in password.
+      --min-lower=0        Minimum number of lowercase characters in password.
+      --max-lower=-1       Maximum number of lowercase characters in password.
+      --min-digit=0        Minimum number of digit characters in password.
+      --max-digit=-1       Maximum number of digit characters in password.
+      --min-symbol=0       Minimum number of symbol characters in password.
+      --max-symbol=-1      Maximum number of symbol characters in password.
+      --exclude=""         Exclude specific characters from password.
+
 # License
 
 Copyright &copy; 2016 Chris Schmich<br>
