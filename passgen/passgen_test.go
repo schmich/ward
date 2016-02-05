@@ -1,10 +1,15 @@
-package tests
+package passgen_test
 
 import (
-  . "gopkg.in/check.v1"
+  "testing"
   "github.com/schmich/ward/passgen"
+  . "gopkg.in/check.v1"
   "strings"
 )
+
+func Test(t *testing.T) {
+  TestingT(t)
+}
 
 type PassgenSuite struct {
 }

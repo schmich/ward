@@ -1,9 +1,14 @@
-package tests
+package crypto_test
 
 import (
+  "testing"
   "github.com/schmich/ward/crypto"
   . "gopkg.in/check.v1"
 )
+
+func Test(t *testing.T) {
+  TestingT(t)
+}
 
 type CryptoSuite struct {
 }

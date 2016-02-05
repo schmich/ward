@@ -1,6 +1,7 @@
-package tests
+package store_test
 
 import (
+  "testing"
   "github.com/schmich/ward/store"
   . "gopkg.in/check.v1"
   "path/filepath"
@@ -8,6 +9,10 @@ import (
   "io/ioutil"
   "os"
 )
+
+func Test(t *testing.T) {
+  TestingT(t)
+}
 
 type StoreSuite struct {
 }
