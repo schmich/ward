@@ -11,7 +11,7 @@ type CryptoSuite struct {
 var _ = Suite(&CryptoSuite{})
 
 func (s *CryptoSuite) TestNewKey(c *C) {
-  key, _ := crypto.NewKey()
+  key := crypto.NewKey()
   c.Assert(key, NotNil)
 }
 
@@ -53,8 +53,7 @@ func (s *CryptoSuite) TestNewLoadPasswordKey(c *C) {
 }
 
 func (s *CryptoSuite) TestNewCipher(c *C) {
-  key, _ := crypto.NewKey()
-  cipher, err := crypto.NewCipher(key)
+  cipher, err := crypto.NewCipher(crypto.NewKey())
   c.Assert(cipher, NotNil)
   c.Assert(err, IsNil)
 }
@@ -66,15 +65,14 @@ func (s *CryptoSuite) TestNewCipherFail(c *C) {
 }
 
 func (s *CryptoSuite) TestLoadCipher(c *C) {
-  key, _ := crypto.NewKey()
   nonce := make([]byte, 12)
-  cipher, err := crypto.LoadCipher(key, nonce)
+  cipher, err := crypto.LoadCipher(crypto.NewKey(), nonce)
   c.Assert(cipher, NotNil)
   c.Assert(err, IsNil)
 }
 
 func (s *CryptoSuite) TestNewLoadCipher(c *C) {
-  key, _ := crypto.NewKey()
+  key := crypto.NewKey()
   newCipher, _ := crypto.NewCipher(key)
   loadCipher, _ := crypto.LoadCipher(key, newCipher.GetNonce())
   c.Assert(loadCipher, NotNil)
@@ -82,15 +80,13 @@ func (s *CryptoSuite) TestNewLoadCipher(c *C) {
 }
 
 func (s *CryptoSuite) TestGetNonce(c *C) {
-  key, _ := crypto.NewKey()
-  cipher, _ := crypto.NewCipher(key)
+  cipher, _ := crypto.NewCipher(crypto.NewKey())
   nonce := cipher.GetNonce()
   c.Assert(nonce, NotNil)
 }
 
 func (s *CryptoSuite) TestEncrypt(c *C) {
-  key, _ := crypto.NewKey()
-  cipher, _ := crypto.NewCipher(key)
+  cipher, _ := crypto.NewCipher(crypto.NewKey())
   nonce0 := cipher.GetNonce()
   plaintext := []byte { 1, 2, 3, 4, 5 }
   ciphertext1 := cipher.Encrypt(plaintext)
@@ -107,8 +103,7 @@ func (s *CryptoSuite) TestEncrypt(c *C) {
 }
 
 func (s *CryptoSuite) TestTryDecrypt(c *C) {
-  key, _ := crypto.NewKey()
-  cipher, _ := crypto.NewCipher(key)
+  cipher, _ := crypto.NewCipher(crypto.NewKey())
   plaintext := []byte { 1, 2, 3, 4, 5 }
   ciphertext := cipher.Encrypt(plaintext)
   plaintextVerify, err := cipher.TryDecrypt(ciphertext)
@@ -118,11 +113,12 @@ func (s *CryptoSuite) TestTryDecrypt(c *C) {
 }
 
 func (s *CryptoSuite) TestTryDecryptFail(c *C) {
-  key, _ := crypto.NewKey()
+  key := crypto.NewKey()
   encipher, _ := crypto.NewCipher(key)
   plaintext := []byte { 1, 2, 3, 4, 5 }
   ciphertext := encipher.Encrypt(plaintext)
-  newKey, _ := crypto.NewKey()
+  newKey := crypto.NewKey()
+  c.Assert(key, Not(DeepEquals), newKey)
   decipher, _ := crypto.LoadCipher(newKey, encipher.GetNonce())
   plaintextVerify, err := decipher.TryDecrypt(ciphertext)
   c.Assert(err, NotNil)
@@ -130,7 +126,7 @@ func (s *CryptoSuite) TestTryDecryptFail(c *C) {
 }
 
 func (s *CryptoSuite) TestDecrypt(c *C) {
-  key, _ := crypto.NewKey()
+  key := crypto.NewKey()
   encipher, _ := crypto.NewCipher(key)
   plaintext := []byte { 1, 2, 3, 4, 5 }
   ciphertext := encipher.Encrypt(plaintext)

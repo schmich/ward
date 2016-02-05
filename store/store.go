@@ -106,11 +106,7 @@ func createCipher(db *sql.DB, password string, passwordStretch int) (*crypto.Cip
     return nil, nil, err
   }
 
-  key, err := crypto.NewKey()
-  if err != nil {
-    return nil, nil, err
-  }
-
+  key := crypto.NewKey()
   keyCipher, err := crypto.NewCipher(key)
   if err != nil {
     return nil, nil, err

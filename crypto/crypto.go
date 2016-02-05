@@ -21,18 +21,15 @@ type Cipher struct {
   nonce *big.Int
 }
 
-func NewKey() ([]byte, error) {
+func NewKey() []byte {
   key := make([]byte, aes.BlockSize)
   count, err := rand.Read(key)
-  if err != nil {
-    return nil, err
+
+  if (err != nil) || (count != len(key)) {
+    panic("Failed to generate random key.")
   }
 
-  if count != len(key) {
-    return nil, errors.New("Failed to generate random key.")
-  }
-
-  return key, nil
+  return key
 }
 
 func NewPasswordKey(password string, stretch int) ([]byte, []byte, error) {
