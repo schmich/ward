@@ -69,7 +69,7 @@ Copy an existing password with partial string matching:
 
     > ward copy linked
     Master password:
-    ✓ Password for foo@example.com:linkedin.com copied to the clipboard.
+    ✓ Password for linkedin.com::foo@example.com copied to the clipboard.
 
 Export credentials as JSON:
 
