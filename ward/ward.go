@@ -215,7 +215,7 @@ func (app *App) readIndex(low, high int, prompt string) int {
 
 func (app *App) selectCredential(credentials []*store.Credential) *store.Credential {
   for i, credential := range credentials {
-    fmt.Printf("%d. %s\n", i + 1, getIdentifier(credential))
+    fmt.Fprintf(os.Stderr, "%d. %s\n", i + 1, getIdentifier(credential))
   }
 
   index := app.readIndex(1, len(credentials), "> ")
@@ -232,7 +232,7 @@ func (app *App) findCredential(db *store.Store, query []string) *store.Credentia
     return credentials[0]
   } else {
     queryString := strings.Join(query, " ")
-    fmt.Printf("Found multiple credentials matching \"%s\":\n", queryString)
+    fmt.Fprintf(os.Stderr, "Found multiple credentials matching \"%s\":\n", queryString)
     return app.selectCredential(credentials)
   }
 }
