@@ -13,23 +13,23 @@ From latest source: `go get github.com/schmich/ward && go install github.com/sch
 # Usage
 
     Usage: ward [OPTIONS] COMMAND [arg...]
-    
+
     Secure password manager - https://github.com/schmich/ward
-    
+
     Options:
       -v, --version    Show the version and exit
-    
+
     Commands:
       init         Create a new credential database.
       add          Add a new credential.
       copy         Copy a password to the clipboard.
       edit         Edit an existing credential.
       del          Delete a stored credential.
-      show         Show a stored credential.
+      qr           Print password formatted as a QR code.
       import       Import JSON-formatted credentials.
       export       Export JSON-formatted credentials.
       master       Update master password.
-  
+
     Run 'ward COMMAND --help' for more information on a command.
 
 Create a new credential database:

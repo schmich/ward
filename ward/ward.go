@@ -9,6 +9,9 @@ import (
   "github.com/fatih/color"
   "github.com/jawher/mow.cli"
   "github.com/atotto/clipboard"
+  "github.com/qpliu/qrencode-go/qrencode"
+  "github.com/mattn/go-colorable"
+  "github.com/fumiyas/qrc/lib"
   "encoding/json"
   "path/filepath"
   "io/ioutil"
@@ -266,6 +269,25 @@ func (app *App) runCopy(query []string) {
   identifier := getIdentifier(credential)
 
   app.printSuccess("Password for %s copied to the clipboard.\n", identifier)
+}
+
+func (app *App) runQr(query []string) {
+  db := app.openStore()
+  defer db.Close()
+
+  credential := app.findCredential(db, query)
+  if credential == nil {
+    return
+  }
+
+  grid, err := qrencode.Encode(credential.Password, qrencode.ECLevelL)
+  if err != nil {
+    app.printError("%s\n", err)
+    return
+  }
+
+  stdout := colorable.NewColorableStdout()
+  qrc.PrintAA(stdout, grid, false)
 }
 
 func (app *App) runEdit(query []string) {
@@ -549,9 +571,19 @@ func (app *App) Run(args []string) {
     }
   })
 
-  ward.Command("show", "Show a stored credential.", func(cmd *cli.Cmd) {
-    // TODO
-    fmt.Println("show")
+  ward.Command("qr", "Print password formatted as a QR code.", func(cmd *cli.Cmd) {
+    cmd.Spec = "QUERY..."
+
+    query := cmd.Strings(cli.StringsArg {
+      Name: "QUERY",
+      Desc: "Criteria to match.",
+      Value: []string{},
+      EnvVar: "",
+    })
+
+    cmd.Action = func() {
+      app.runQr(*query)
+    }
   })
 
   ward.Command("import", "Import JSON-formatted credentials.", func(cmd *cli.Cmd) {
