@@ -286,6 +286,9 @@ func (app *App) runQr(query []string) {
     return
   }
 
+  identifier := getIdentifier(credential)
+  app.printSuccess("Password for %s:\n", identifier)
+
   stdout := colorable.NewColorableStdout()
   qrc.PrintAA(stdout, grid, false)
 }
