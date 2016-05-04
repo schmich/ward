@@ -429,7 +429,7 @@ func (app *App) runUpdateMasterPassword(keyStretch int) {
 
 func (app *App) runLink(existingFileName string) {
   existingFullPath, _ := filepath.Abs(existingFileName)
-  err := os.Link(existingFullPath, app.storeFileName)
+  err := os.Symlink(existingFullPath, app.storeFileName)
   if err != nil {
     app.printError("Could not use existing database: %s\n", err)
   } else {

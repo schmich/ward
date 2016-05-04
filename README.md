@@ -41,7 +41,7 @@ Create a new credential database:
     Master password (confirm):
     ✓ Credential database created at C:\Users\schmich\.ward.
 
-Link to an existing credential database (e.g. from Dropbox):
+Link to an existing credential database (this requires administrator privileges on Windows):
 
     > ward init --link C:\Users\schmich\Dropbox\.ward
     ✓ Linked to existing database C:\Users\schmich\.ward -> C:\Users\schmich\Dropbox\.ward.
