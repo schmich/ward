@@ -311,7 +311,7 @@ func (app *App) runEdit(query []string) {
     credential.Login = login
   }
 
-  if password := app.readInput("Password (blank to keep current): "); password != "" {
+  if password := app.readPassword("Password (blank to keep current): "); password != "" {
     credential.Password = password
   }
 
