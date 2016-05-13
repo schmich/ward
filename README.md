@@ -1,6 +1,6 @@
 # Ward
 
-Ward is a secure single-file password manager.
+Ward is a secure, cross-platform, zero-install, single-file password manager.
 
 Ward stores your passwords in an encrypted file which you manage with a single master password. You can keep track of multiple complex passwords without having to remember any of them.
 
