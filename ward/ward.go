@@ -620,9 +620,12 @@ func (app *App) Run(args []string) {
 }
 
 func main() {
-  homeDir, _ := homedir.Dir()
-  wardPath := filepath.Join(homeDir, ".ward")
+  wardFile := os.Getenv("WARDFILE")
+  if wardFile == "" {
+    homeDir, _ := homedir.Dir()
+    wardFile = filepath.Join(homeDir, ".ward")
+  }
 
-  app := NewApp(wardPath)
+  app := NewApp(wardFile)
   app.Run(os.Args)
 }

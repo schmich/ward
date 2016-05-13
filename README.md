@@ -92,16 +92,20 @@ Import JSON credentials:
     Importing 192 credentials.
     ✓ Imported credentials from credentials.json.
 
+The Ward database is stored at `~/.ward`. This can be overridden with the `WARDFILE` environment variable, e.g. in `.bashrc`:
+
+    export WARDFILE=~/dotfiles/ward
+
 # Password Generator
 
 Ward comes with a constraint-solving password generator that you can use when adding a new credential (`ward add --gen`). You can control length, character requirements, and exclusions:
 
     > ward add --help
-    
+
     Usage: ward add [--login] [--realm] [--note] [--no-copy] [--gen [--length] [--min-length] [--max-length] [--no-upper] [--no-lower] [--no-digit] [--no-symbol] [--no-similar] [--min-upper] [--max-upper] [--min-lower] [--max-lower] [--min-digit] [--max-digit] [--min-symbol] [--max-symbol] [--exclude]]
-    
+
     Add a new credential.
-    
+
     Options:
       --login=""           Login for credential, e.g. username or email.
       --realm=""           Realm for credential, e.g. website or WiFi AP name.
