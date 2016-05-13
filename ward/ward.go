@@ -319,10 +319,12 @@ func (app *App) runEdit(query []string) {
     return
   }
 
+  fmt.Println("\nCurrent credential:")
   fmt.Printf("Login: %s\n", credential.Login)
   fmt.Printf("Password: %s\n", credential.Password)
   fmt.Printf("Realm: %s\n", credential.Realm)
   fmt.Printf("Note: %s\n", credential.Note)
+  fmt.Println("\nEdit credential:")
 
   if login := app.readInput("Login (blank to keep current): "); login != "" {
     credential.Login = login
@@ -341,6 +343,7 @@ func (app *App) runEdit(query []string) {
   }
 
   db.UpdateCredential(credential)
+  fmt.Println()
   app.printSuccess("Credential updated.\n")
 }
 
