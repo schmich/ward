@@ -463,7 +463,7 @@ func (app *App) runLink(existingFileName string) {
 func (app *App) Run(args []string) {
   ward := cli.App("ward", "Secure password manager - https://github.com/schmich/ward")
 
-  ward.Version("v version", "ward 0.0.2")
+  ward.Version("v version", "ward " + Version)
 
   ward.Command("init", "Create a new credential database.", func(cmd *cli.Cmd) {
     cmd.Spec = "[--stretch|--link=<file>]"
