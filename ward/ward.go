@@ -72,6 +72,23 @@ func (app *App) readPasswordConfirm(prompt string) string {
   }
 }
 
+func (app *App) readEditPasswordConfirm() (bool, string) {
+  for {
+    password := app.readPassword("Password (blank to keep current): ")
+    if password == "" {
+      return false, ""
+    }
+
+    confirm := app.readPassword("Password (confirm): ")
+
+    if password != confirm {
+      app.printError("Passwords do not match.\n")
+    } else {
+      return true, password
+    }
+  }
+}
+
 func (app *App) runInit(keyStretch int) {
   fmt.Println("Creating new credential database.")
   password := app.readPasswordConfirm("Master password")
@@ -311,7 +328,7 @@ func (app *App) runEdit(query []string) {
     credential.Login = login
   }
 
-  if password := app.readPassword("Password (blank to keep current): "); password != "" {
+  if updated, password := app.readEditPasswordConfirm(); updated {
     credential.Password = password
   }
 
