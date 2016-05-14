@@ -37,7 +37,7 @@ func (app *App) runQr(query []string) {
     return
   }
 
-  identifier := getIdentifier(credential)
+  identifier := formatCredential(credential)
   app.printSuccess("Password for %s:\n", identifier)
 
   stdout := colorable.NewColorableStdout()

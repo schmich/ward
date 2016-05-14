@@ -30,7 +30,7 @@ func (app *App) runCopy(query []string) {
   }
 
   clipboard.WriteAll(credential.Password)
-  identifier := getIdentifier(credential)
+  identifier := formatCredential(credential)
 
   app.printSuccess("Password for %s copied to the clipboard.\n", identifier)
 }

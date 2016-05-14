@@ -96,7 +96,7 @@ func (app *App) readIndex(low, high int, prompt string) int {
 
 func (app *App) selectCredential(credentials []*store.Credential) *store.Credential {
   for i, credential := range credentials {
-    fmt.Fprintf(os.Stderr, "%d. %s\n", i + 1, getIdentifier(credential))
+    fmt.Fprintf(os.Stderr, "%d. %s\n", i + 1, formatCredential(credential))
   }
 
   index := app.readIndex(1, len(credentials), "> ")
@@ -118,7 +118,7 @@ func (app *App) findCredential(db *store.Store, query []string) *store.Credentia
   }
 }
 
-func getIdentifier(credential *store.Credential) string {
+func formatCredential(credential *store.Credential) string {
   loginRealm := ""
   if len(credential.Login) > 0 && len(credential.Realm) > 0 {
     loginRealm = credential.Login + "@" + credential.Realm
