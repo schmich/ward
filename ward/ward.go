@@ -257,9 +257,9 @@ func (app *App) findCredential(db *store.Store, query []string) *store.Credentia
 func getIdentifier(credential *store.Credential) string {
   loginRealm := ""
   if len(credential.Login) > 0 && len(credential.Realm) > 0 {
-    loginRealm = credential.Realm + "::" + credential.Login
+    loginRealm = credential.Login + "@" + credential.Realm
   } else {
-    loginRealm = credential.Realm + credential.Login
+    loginRealm = credential.Login + credential.Realm
   }
 
   if len(credential.Note) == 0 {
