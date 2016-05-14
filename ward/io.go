@@ -51,7 +51,7 @@ func readPasswordConfirm(prompt string) string {
 
 func readChar(prompt string, allowedRunes string) byte {
   for {
-    response := strings.ToLower(readInput(prompt))
+    response := strings.ToLower(strings.TrimSpace(readInput(prompt)))
 
     if len(response) == 0 || !strings.Contains(allowedRunes, string(response[0])) {
       printError("Invalid response.\n")
@@ -68,7 +68,7 @@ func readYesNo(prompt string) bool {
 
 func readIndex(low, high int, prompt string) int {
   for {
-    input := readInput(prompt)
+    input := strings.TrimSpace(readInput(prompt))
     index, err := strconv.Atoi(input)
     if (err != nil) || (index < low) || (index > high) {
       printError("Invalid choice.\n")
