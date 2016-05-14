@@ -29,6 +29,7 @@ Ward stores your passwords in an encrypted file which you manage with a single m
       qr           Print password formatted as a QR code.
       import       Import JSON-formatted credentials.
       export       Export JSON-formatted credentials.
+      list         Print a table-formatted list of credentials.
       master       Update master password.
 
     Run 'ward COMMAND --help' for more information on a command.
@@ -41,7 +42,7 @@ Create a new credential database:
     Master password (confirm):
     ✓ Credential database created at C:\Users\schmich\.ward.
 
-Link to an existing credential database (this requires administrator privileges on Windows):
+Link to an existing credential database. This requires administrator privileges on Windows. A symlink will be created to the specified file:
 
     > ward init --link C:\Users\schmich\Dropbox\.ward
     ✓ Linked to existing database C:\Users\schmich\.ward -> C:\Users\schmich\Dropbox\.ward.
@@ -50,7 +51,7 @@ Add a new credential:
 
     > ward add
     Master password:
-    Login: foo@example.com
+    Login: fizz@buzz.com
     Password:
     Password (confirm):
     Realm: linkedin.com
@@ -70,7 +71,7 @@ Copy an existing password with partial string matching:
 
     > ward copy linked
     Master password:
-    ✓ Password for linkedin.com::foo@example.com copied to the clipboard.
+    ✓ Password for fizz@buzz.com@linkedin.com copied to the clipboard.
 
 Export credentials as JSON:
 
@@ -78,7 +79,7 @@ Export credentials as JSON:
     Master password:
     [
       {
-        "login": "foo@example.com",
+        "login": "fizz@buzz.com",
         "password": "bH`-uKY~A1YG5T$SqNYN8pw,j!Xa\\Gsy41f|",
         "realm": "linkedin.com",
         "note": "LinkedIn account"
