@@ -47,33 +47,21 @@ func (app *App) readPasswordConfirm(prompt string) string {
   }
 }
 
-func (app *App) readEditPasswordConfirm() (bool, string) {
+func (app *App) readChar(prompt string, allowedRunes string) byte {
   for {
-    password := app.readPassword("Password (blank to keep current): ")
-    if password == "" {
-      return false, ""
-    }
+    response := strings.ToLower(app.readInput(prompt))
 
-    confirm := app.readPassword("Password (confirm): ")
-
-    if password != confirm {
-      app.printError("Passwords do not match.\n")
+    if len(response) == 0 || !strings.Contains(allowedRunes, string(response[0])) {
+      app.printError("Invalid response.\n")
     } else {
-      return true, password
+      return response[0]
     }
   }
 }
 
 func (app *App) readYesNo(prompt string) bool {
-  for {
-    response := strings.ToLower(app.readInput(prompt + " (y/n)? "))
-
-    if response == "" || (response[0] != 'y' && response[0] != 'n') {
-      app.printError("Invalid response.\n")
-    } else {
-      return response[0] == 'y'
-    }
-  }
+  response := app.readChar(prompt + " (y/n)? ", "yn")
+  return response == 'y'
 }
 
 func (app *App) openStore() *store.Store {

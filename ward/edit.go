@@ -29,30 +29,37 @@ func (app *App) runEdit(query []string) {
     return
   }
 
-  fmt.Println("\nCurrent credential:")
+  fmt.Println("Current credential:")
   fmt.Printf("Login: %s\n", credential.Login)
-  fmt.Printf("Password: %s\n", credential.Password)
+  fmt.Println("Password: (not shown)")
   fmt.Printf("Realm: %s\n", credential.Realm)
   fmt.Printf("Note: %s\n", credential.Note)
-  fmt.Println("\nEdit credential:")
 
-  if login := app.readInput("Login (blank to keep current): "); login != "" {
-    credential.Login = login
+  update := false
+
+  for {
+    response := app.readChar("Edit login, password, realm, note, or quit (l/p/r/n/q)? ", "lprnq")
+    if response == 'q' {
+      break
+    }
+
+    if response == 'l' {
+      credential.Login = app.readInput("New login: ")
+    } else if response == 'p' {
+      credential.Password = app.readPasswordConfirm("New password")
+    } else if response == 'r' {
+      credential.Realm = app.readInput("New realm: ")
+    } else if response == 'n' {
+      credential.Note = app.readInput("New note: ")
+    }
+
+    update = true
   }
 
-  if updated, password := app.readEditPasswordConfirm(); updated {
-    credential.Password = password
+  if update {
+    db.UpdateCredential(credential)
+    app.printSuccess("Credential updated.\n")
+  } else {
+    app.printError("No changes made.\n")
   }
-
-  if realm := app.readInput("Realm (blank to keep current): "); realm != "" {
-    credential.Realm = realm
-  }
-
-  if note := app.readInput("Note (blank to keep current): "); note != "" {
-    credential.Note = note
-  }
-
-  db.UpdateCredential(credential)
-  fmt.Println()
-  app.printSuccess("Credential updated.\n")
 }
