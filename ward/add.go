@@ -9,6 +9,8 @@ import (
 )
 
 func (app *App) addCommand(cmd *cli.Cmd) {
+  const SimilarChars = "5SB8|1IiLl0Oo"
+
   cmd.Spec = "[--login] [--realm] [--note] [--no-copy] [--gen [--length] [--min-length] [--max-length] [--no-upper] [--no-lower] [--no-digit] [--no-symbol] [--no-similar] [--min-upper] [--max-upper] [--min-lower] [--max-lower] [--min-digit] [--max-digit] [--min-symbol] [--max-symbol] [--exclude]]"
 
   login := cmd.StringOpt("login", "", "Login for credential, e.g. username or email.")
@@ -21,11 +23,11 @@ func (app *App) addCommand(cmd *cli.Cmd) {
   minLength := cmd.IntOpt("min-length", 30, "Minimum length password.")
   maxLength := cmd.IntOpt("max-length", 40, "Maximum length password.")
 
-  noUpper := cmd.BoolOpt("no-upper", false, "Exclude uppercase characters in password.")
-  noLower := cmd.BoolOpt("no-lower", false, "Exclude lowercase characters in password.")
-  noDigit := cmd.BoolOpt("no-digit", false, "Exclude digit characters in password.")
-  noSymbol := cmd.BoolOpt("no-symbol", false, "Exclude symbol characters in password.")
-  noSimilar := cmd.BoolOpt("no-similar", false, "Exclude similar characters in password.")
+  noUpper := cmd.BoolOpt("no-upper", false, "Exclude uppercase characters from password.")
+  noLower := cmd.BoolOpt("no-lower", false, "Exclude lowercase characters from password.")
+  noDigit := cmd.BoolOpt("no-digit", false, "Exclude digit characters from password.")
+  noSymbol := cmd.BoolOpt("no-symbol", false, "Exclude symbol characters from password.")
+  noSimilar := cmd.BoolOpt("no-similar", false, "Exclude similar characters from password: " + SimilarChars + ".")
 
   minUpper := cmd.IntOpt("min-upper", 0, "Minimum number of uppercase characters in password.")
   maxUpper := cmd.IntOpt("max-upper", -1, "Maximum number of uppercase characters in password.")
@@ -70,7 +72,7 @@ func (app *App) addCommand(cmd *cli.Cmd) {
       }
       generator.Exclude = *exclude
       if (*noSimilar) {
-        generator.Exclude += "5SB8|1IiLl0Oo"
+        generator.Exclude += SimilarChars
       }
       app.runGen(*login, *realm, *note, !*noCopy, generator)
     }
