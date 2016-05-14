@@ -33,6 +33,7 @@ func (app *App) Run(args []string) {
   ward.Command("qr", "Print password formatted as a QR code.", app.qrCommand)
   ward.Command("import", "Import JSON-formatted credentials.", app.importCommand)
   ward.Command("export", "Export JSON-formatted credentials.", app.exportCommand)
+  ward.Command("list", "Print a table-formatted list of credentials.", app.listCommand)
   ward.Command("master", "Update master password.", app.masterCommand)
   ward.Run(args)
 }
