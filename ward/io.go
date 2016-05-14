@@ -2,7 +2,6 @@ package main
 
 import (
   "github.com/schmich/ward/store"
-  "github.com/schmich/ward/crypto"
   "github.com/fatih/color"
   "golang.org/x/crypto/ssh/terminal"
   "strings"
@@ -65,24 +64,6 @@ func readChar(prompt string, allowedRunes string) byte {
 func readYesNo(prompt string) bool {
   response := readChar(prompt + " (y/n)? ", "yn")
   return response == 'y'
-}
-
-func (app *App) openStore() *store.Store {
-  for {
-    master := readPassword("Master password: ")
-    db, err := store.Open(app.storeFileName, master)
-    if err == nil {
-      return db
-    }
-
-    printError("%s\n", err)
-
-    if _, ok := err.(crypto.IncorrectPasswordError); !ok {
-      if _, ok = err.(crypto.InvalidPasswordError); !ok {
-        os.Exit(1)
-      }
-    }
-  }
 }
 
 func readIndex(low, high int, prompt string) int {

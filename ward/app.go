@@ -1,7 +1,8 @@
 package main
 
 import (
-  "github.com/mitchellh/go-homedir"
+  "github.com/schmich/ward/store"
+  "github.com/schmich/ward/crypto"
   "github.com/jawher/mow.cli"
   "path/filepath"
   "os"
@@ -19,6 +20,24 @@ func NewApp(fileName string) *App {
   }
 }
 
+func (app *App) openStore() *store.Store {
+  for {
+    master := readPassword("Master password: ")
+    db, err := store.Open(app.storeFileName, master)
+    if err == nil {
+      return db
+    }
+
+    printError("%s\n", err)
+
+    if _, ok := err.(crypto.IncorrectPasswordError); !ok {
+      if _, ok = err.(crypto.InvalidPasswordError); !ok {
+        os.Exit(1)
+      }
+    }
+  }
+}
+
 func (app *App) Run(args []string) {
   ward := cli.App("ward", "Secure password manager - https://github.com/schmich/ward")
   ward.Version("v version", "ward " + Version)
@@ -33,15 +52,4 @@ func (app *App) Run(args []string) {
   ward.Command("list", "Print a table-formatted list of credentials.", app.listCommand)
   ward.Command("master", "Update master password.", app.masterCommand)
   ward.Run(args)
-}
-
-func main() {
-  wardFile := os.Getenv("WARDFILE")
-  if wardFile == "" {
-    homeDir, _ := homedir.Dir()
-    wardFile = filepath.Join(homeDir, ".ward")
-  }
-
-  app := NewApp(wardFile)
-  app.Run(os.Args)
 }
