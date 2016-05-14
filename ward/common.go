@@ -64,6 +64,18 @@ func (app *App) readEditPasswordConfirm() (bool, string) {
   }
 }
 
+func (app *App) readYesNo(prompt string) bool {
+  for {
+    response := strings.ToLower(app.readInput(prompt + " (y/n)? "))
+
+    if response == "" || (response[0] != 'y' && response[0] != 'n') {
+      app.printError("Invalid response.\n")
+    } else {
+      return response[0] == 'y'
+    }
+  }
+}
+
 func (app *App) openStore() *store.Store {
   for {
     master := app.readPassword("Master password: ")

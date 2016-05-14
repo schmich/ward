@@ -28,6 +28,11 @@ func (app *App) runDel(query []string) {
     return
   }
 
-  db.DeleteCredential(credential)
-  app.printSuccess("Credential deleted.\n")
+  identifier := formatCredential(credential)
+  if confirm := app.readYesNo("Delete " + identifier); confirm {
+    db.DeleteCredential(credential)
+    app.printSuccess("Credential deleted.\n")
+  } else {
+    app.printError("Canceled.\n")
+  }
 }
