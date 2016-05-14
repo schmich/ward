@@ -45,13 +45,13 @@ func (app *App) runExport(fileName string, compact bool) {
   }
 
   if err != nil {
-    app.printError("%s\n", err)
+    printError("%s\n", err)
     return
   }
 
   output.Write(jsonData)
 
   if fileName != "" {
-    app.printSuccess("Exported credentials to %s.\n", fileName)
+    printSuccess("Exported credentials to %s.\n", fileName)
   }
 }

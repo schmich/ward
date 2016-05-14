@@ -24,7 +24,7 @@ func (app *App) runCopy(query []string) {
   db := app.openStore()
   defer db.Close()
 
-  credential := app.findCredential(db, query)
+  credential := findCredential(db, query)
   if credential == nil {
     return
   }
@@ -32,5 +32,5 @@ func (app *App) runCopy(query []string) {
   clipboard.WriteAll(credential.Password)
   identifier := formatCredential(credential)
 
-  app.printSuccess("Password for %s copied to the clipboard.\n", identifier)
+  printSuccess("Password for %s copied to the clipboard.\n", identifier)
 }

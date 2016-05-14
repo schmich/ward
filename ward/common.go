@@ -7,72 +7,75 @@ import (
   "golang.org/x/crypto/ssh/terminal"
   "strings"
   "strconv"
+  "bufio"
   "fmt"
   "os"
 )
 
-func (app *App) printSuccess(format string, args ...interface {}) {
+var scanner = bufio.NewScanner(os.Stdin)
+
+func printSuccess(format string, args ...interface {}) {
   fmt.Printf(color.GreenString("✓ ") + format, args...)
 }
 
-func (app *App) printError(format string, args ...interface {}) {
+func printError(format string, args ...interface {}) {
   fmt.Printf(color.RedString("✗ ") + format, args...)
 }
 
-func (app *App) readInput(prompt string) string {
+func readInput(prompt string) string {
   fmt.Fprint(os.Stderr, prompt)
   color.Set(color.FgHiBlack)
   defer color.Unset()
-  app.scanner.Scan()
-  return app.scanner.Text()
+  scanner.Scan()
+  return scanner.Text()
 }
 
-func (app *App) readPassword(prompt string) string {
+func readPassword(prompt string) string {
   fmt.Fprint(os.Stderr, prompt)
   password, _ := terminal.ReadPassword(int(os.Stdin.Fd()))
   println()
   return string(password)
 }
 
-func (app *App) readPasswordConfirm(prompt string) string {
+func readPasswordConfirm(prompt string) string {
   for {
-    password := app.readPassword(prompt + ": ")
-    confirm := app.readPassword(prompt + " (confirm): ")
+    password := readPassword(prompt + ": ")
+    confirm := readPassword(prompt + " (confirm): ")
 
     if password != confirm {
-      app.printError("Passwords do not match.\n")
+      printError("Passwords do not match.\n")
     } else {
       return password
     }
   }
 }
 
-func (app *App) readChar(prompt string, allowedRunes string) byte {
+func readChar(prompt string, allowedRunes string) byte {
   for {
-    response := strings.ToLower(app.readInput(prompt))
+    response := strings.ToLower(readInput(prompt))
 
     if len(response) == 0 || !strings.Contains(allowedRunes, string(response[0])) {
-      app.printError("Invalid response.\n")
+      printError("Invalid response.\n")
     } else {
       return response[0]
     }
   }
 }
 
-func (app *App) readYesNo(prompt string) bool {
-  response := app.readChar(prompt + " (y/n)? ", "yn")
+func readYesNo(prompt string) bool {
+  response := readChar(prompt + " (y/n)? ", "yn")
   return response == 'y'
 }
 
 func (app *App) openStore() *store.Store {
   for {
-    master := app.readPassword("Master password: ")
+    master := readPassword("Master password: ")
     db, err := store.Open(app.storeFileName, master)
     if err == nil {
       return db
     }
 
-    app.printError("%s\n", err)
+    printError("%s\n", err)
 
     if _, ok := err.(crypto.IncorrectPasswordError); !ok {
       if _, ok = err.(crypto.InvalidPasswordError); !ok {
@@ -82,39 +85,39 @@ func (app *App) openStore() *store.Store {
   }
 }
 
-func (app *App) readIndex(low, high int, prompt string) int {
+func readIndex(low, high int, prompt string) int {
   for {
-    input := app.readInput(prompt)
+    input := readInput(prompt)
     index, err := strconv.Atoi(input)
     if (err != nil) || (index < low) || (index > high) {
-      app.printError("Invalid choice.\n")
+      printError("Invalid choice.\n")
     } else {
       return index
     }
   }
 }
 
-func (app *App) selectCredential(credentials []*store.Credential) *store.Credential {
+func selectCredential(credentials []*store.Credential) *store.Credential {
   for i, credential := range credentials {
     fmt.Fprintf(os.Stderr, "%d. %s\n", i + 1, formatCredential(credential))
   }
 
-  index := app.readIndex(1, len(credentials), "> ")
+  index := readIndex(1, len(credentials), "> ")
   return credentials[index - 1]
 }
 
-func (app *App) findCredential(db *store.Store, query []string) *store.Credential {
+func findCredential(db *store.Store, query []string) *store.Credential {
   credentials := db.FindCredentials(query)
   if len(credentials) == 0 {
     queryString := strings.Join(query, " ")
-    app.printError("No credentials match \"%s\".\n", queryString)
+    printError("No credentials match \"%s\".\n", queryString)
     return nil
   } else if len(credentials) == 1 {
     return credentials[0]
   } else {
     queryString := strings.Join(query, " ")
     fmt.Fprintf(os.Stderr, "Found multiple credentials matching \"%s\":\n", queryString)
-    return app.selectCredential(credentials)
+    return selectCredential(credentials)
   }
 }
 

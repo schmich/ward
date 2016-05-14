@@ -84,17 +84,17 @@ func (app *App) runAdd(login, realm, note string, copyPassword bool) {
   defer db.Close()
 
   if login == "" {
-    login = app.readInput("Login: ")
+    login = readInput("Login: ")
   }
 
-  password := app.readPasswordConfirm("Password")
+  password := readPasswordConfirm("Password")
 
   if realm == "" {
-    realm = app.readInput("Realm: ")
+    realm = readInput("Realm: ")
   }
 
   if note == "" {
-    note = app.readInput("Note: ")
+    note = readInput("Note: ")
   }
 
   db.AddCredential(&store.Credential {
@@ -104,7 +104,7 @@ func (app *App) runAdd(login, realm, note string, copyPassword bool) {
     Note: note,
   })
 
-  app.printSuccess("Credential added. ")
+  printSuccess("Credential added. ")
 
   if copyPassword {
     clipboard.WriteAll(password)
@@ -130,20 +130,20 @@ func (app *App) runGen(login, realm, note string, copyPassword bool, generator *
   }()
 
   if login == "" {
-    login = app.readInput("Login: ")
+    login = readInput("Login: ")
   }
 
   if realm == "" {
-    realm = app.readInput("Realm: ")
+    realm = readInput("Realm: ")
   }
 
   if note == "" {
-    note = app.readInput("Note: ")
+    note = readInput("Note: ")
   }
 
   result := <-passwordChan
   if result.err != nil {
-    app.printError("%s\n", result.err)
+    printError("%s\n", result.err)
     return
   }
 
@@ -154,7 +154,7 @@ func (app *App) runGen(login, realm, note string, copyPassword bool, generator *
     Note: note,
   })
 
-  app.printSuccess("Credential added. ")
+  printSuccess("Credential added. ")
 
   if copyPassword {
     clipboard.WriteAll(result.password)

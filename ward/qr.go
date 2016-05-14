@@ -26,19 +26,19 @@ func (app *App) runQr(query []string) {
   db := app.openStore()
   defer db.Close()
 
-  credential := app.findCredential(db, query)
+  credential := findCredential(db, query)
   if credential == nil {
     return
   }
 
   grid, err := qrencode.Encode(credential.Password, qrencode.ECLevelL)
   if err != nil {
-    app.printError("%s\n", err)
+    printError("%s\n", err)
     return
   }
 
   identifier := formatCredential(credential)
-  app.printSuccess("Password for %s:\n", identifier)
+  printSuccess("Password for %s:\n", identifier)
 
   stdout := colorable.NewColorableStdout()
   qrc.PrintAA(stdout, grid, false)

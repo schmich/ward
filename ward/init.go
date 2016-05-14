@@ -25,26 +25,26 @@ func (app *App) initCommand(cmd *cli.Cmd) {
 
 func (app *App) runInit(keyStretch int) {
   fmt.Println("Creating new credential database.")
-  password := app.readPasswordConfirm("Master password")
+  password := readPasswordConfirm("Master password")
 
   db, err := store.Create(app.storeFileName, password, keyStretch)
   if err != nil {
-    app.printError("Failed to create database: %s\n", err.Error())
+    printError("Failed to create database: %s\n", err.Error())
     return
   }
 
   defer db.Close()
 
-  app.printSuccess("Credential database created at %s.\n", app.storeFileName)
+  printSuccess("Credential database created at %s.\n", app.storeFileName)
 }
 
 func (app *App) runLink(existingFileName string) {
   existingFullPath, _ := filepath.Abs(existingFileName)
   err := os.Symlink(existingFullPath, app.storeFileName)
   if err != nil {
-    app.printError("Could not use existing database: %s\n", err)
+    printError("Could not use existing database: %s\n", err)
   } else {
-    app.printSuccess(
+    printSuccess(
       "Linked to existing database %s -> %s.\n",
       app.storeFileName,
       existingFullPath)

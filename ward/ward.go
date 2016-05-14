@@ -4,12 +4,10 @@ import (
   "github.com/mitchellh/go-homedir"
   "github.com/jawher/mow.cli"
   "path/filepath"
-  "bufio"
   "os"
 )
 
 type App struct {
-  scanner *bufio.Scanner
   storeFileName string
 }
 
@@ -17,7 +15,6 @@ func NewApp(fileName string) *App {
   fullPath, _ := filepath.Abs(fileName)
 
   return &App {
-    scanner: bufio.NewScanner(os.Stdin),
     storeFileName: fullPath,
   }
 }

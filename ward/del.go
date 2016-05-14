@@ -23,16 +23,16 @@ func (app *App) runDel(query []string) {
   db := app.openStore()
   defer db.Close()
 
-  credential := app.findCredential(db, query)
+  credential := findCredential(db, query)
   if credential == nil {
     return
   }
 
   identifier := formatCredential(credential)
-  if confirm := app.readYesNo("Delete " + identifier); confirm {
+  if confirm := readYesNo("Delete " + identifier); confirm {
     db.DeleteCredential(credential)
-    app.printSuccess("Credential deleted.\n")
+    printSuccess("Credential deleted.\n")
   } else {
-    app.printError("Canceled.\n")
+    printError("Canceled.\n")
   }
 }

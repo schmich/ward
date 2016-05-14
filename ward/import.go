@@ -23,7 +23,7 @@ func (app *App) runImport(fileName string) {
 
   input, err := os.Open(fileName)
   if err != nil {
-    app.printError("Failed to open %s: %s\n", fileName, err)
+    printError("Failed to open %s: %s\n", fileName, err)
     return
   }
 
@@ -31,7 +31,7 @@ func (app *App) runImport(fileName string) {
 
   contents, err := ioutil.ReadAll(input)
   if err != nil {
-    app.printError("%s\n", err)
+    printError("%s\n", err)
     return
   }
 
@@ -39,7 +39,7 @@ func (app *App) runImport(fileName string) {
   err = json.Unmarshal(contents, &credentials)
 
   if err != nil {
-    app.printError("%s\n", err)
+    printError("%s\n", err)
     return
   }
 
@@ -48,5 +48,5 @@ func (app *App) runImport(fileName string) {
     db.AddCredential(&credential)
   }
 
-  app.printSuccess("Imported credentials from %s.\n", fileName)
+  printSuccess("Imported credentials from %s.\n", fileName)
 }

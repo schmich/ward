@@ -16,12 +16,12 @@ func (app *App) runUpdateMasterPassword(keyStretch int) {
   db := app.openStore()
   defer db.Close()
 
-  password := app.readPasswordConfirm("New master password")
+  password := readPasswordConfirm("New master password")
   err := db.UpdateMasterPassword(password, keyStretch)
   if err != nil {
-    app.printError("%s\n", err)
+    printError("%s\n", err)
     return
   }
 
-  app.printSuccess("Master password updated.\n")
+  printSuccess("Master password updated.\n")
 }

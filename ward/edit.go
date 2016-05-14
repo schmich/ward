@@ -24,7 +24,7 @@ func (app *App) runEdit(query []string) {
   db := app.openStore()
   defer db.Close()
 
-  credential := app.findCredential(db, query)
+  credential := findCredential(db, query)
   if credential == nil {
     return
   }
@@ -38,19 +38,19 @@ func (app *App) runEdit(query []string) {
   update := false
 
   for {
-    response := app.readChar("Edit login, password, realm, note, or quit (l/p/r/n/q)? ", "lprnq")
+    response := readChar("Edit login, password, realm, note, or quit (l/p/r/n/q)? ", "lprnq")
     if response == 'q' {
       break
     }
 
     if response == 'l' {
-      credential.Login = app.readInput("New login: ")
+      credential.Login = readInput("New login: ")
     } else if response == 'p' {
-      credential.Password = app.readPasswordConfirm("New password")
+      credential.Password = readPasswordConfirm("New password")
     } else if response == 'r' {
-      credential.Realm = app.readInput("New realm: ")
+      credential.Realm = readInput("New realm: ")
     } else if response == 'n' {
-      credential.Note = app.readInput("New note: ")
+      credential.Note = readInput("New note: ")
     }
 
     update = true
@@ -58,8 +58,8 @@ func (app *App) runEdit(query []string) {
 
   if update {
     db.UpdateCredential(credential)
-    app.printSuccess("Credential updated.\n")
+    printSuccess("Credential updated.\n")
   } else {
-    app.printError("No changes made.\n")
+    printError("No changes made.\n")
   }
 }
