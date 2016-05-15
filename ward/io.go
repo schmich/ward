@@ -116,7 +116,7 @@ func formatCredential(credential *store.Credential) string {
 
   if len(loginRealm) == 0 {
     return credential.Note
-  } else {
-    return loginRealm + " (" + credential.Note + ")"
   }
+
+  return loginRealm + " (" + credential.Note + ")"
 }

@@ -17,17 +17,17 @@ type Alphabet struct {
   maxCount int
 }
 
-func (this *Alphabet) SetMinMax(min, max int) {
-  this.SetMin(min)
-  this.SetMax(max)
+func (alpha *Alphabet) SetMinMax(min, max int) {
+  alpha.SetMin(min)
+  alpha.SetMax(max)
 }
 
-func (this *Alphabet) SetMin(min int) {
-  this.minCount = min
+func (alpha *Alphabet) SetMin(min int) {
+  alpha.minCount = min
 }
 
-func (this *Alphabet) SetMax(max int) {
-  this.maxCount = max
+func (alpha *Alphabet) SetMax(max int) {
+  alpha.maxCount = max
 }
 
 type Generator struct {
@@ -46,21 +46,21 @@ func New() *Generator {
   }
 }
 
-func (this *Generator) AddAlphabet(characters string) *Alphabet {
+func (generator *Generator) AddAlphabet(characters string) *Alphabet {
   alphabet := &Alphabet {
     characters: characters,
     minCount: -1,
     maxCount: -1,
   }
 
-  this.alphabets = append(this.alphabets, alphabet)
+  generator.alphabets = append(generator.alphabets, alphabet)
 
   return alphabet
 }
 
-func (this *Generator) SetLength(min, max int) {
-  this.minLength = min
-  this.maxLength = max
+func (generator *Generator) SetLength(min, max int) {
+  generator.minLength = min
+  generator.maxLength = max
 }
 
 func randInt(low, high int) int {
@@ -149,12 +149,12 @@ func pow(x int, y int) *big.Int {
 func max(x, y int) int {
   if x > y {
     return x
-  } else {
-    return y
   }
+
+  return y
 }
 
-func (this *Generator) resultWeight(result map[core.VarId]int, store *core.Store, length int, alphabets map[string]*Alphabet) *big.Int {
+func (generator *Generator) resultWeight(result map[core.VarId]int, store *core.Store, length int, alphabets map[string]*Alphabet) *big.Int {
   // weight = (length! * product(i=1,n | len(alphabet_n)^slots_n)) / (product(i=1,n | slots_n!)
 
   counts := make(map[string]int)
@@ -209,33 +209,33 @@ func randLengthResults(resultSet map[int]map[core.VarId]int, lengthVar core.VarI
   return filteredResultSet, length
 }
 
-func (this *Generator) Generate() (string, error)  {
+func (generator *Generator) Generate() (string, error)  {
   // TODO: Handle all characters excluded.
 
-  if len(this.alphabets) == 0 {
+  if len(generator.alphabets) == 0 {
     return "", errors.New("No alphabets defined.")
   }
 
-  if this.minLength == -1 {
+  if generator.minLength == -1 {
     return "", errors.New("You must set a minimum length.")
   }
 
-  if this.maxLength == -1 {
+  if generator.maxLength == -1 {
     return "", errors.New("You must set a maximum length.")
   }
 
   alphabets := make(map[string]*Alphabet)
 
-  for i, alphabet := range this.alphabets {
+  for i, alphabet := range generator.alphabets {
     alphabets[strconv.Itoa(i)] = &Alphabet {
-      characters: exclude(alphabet.characters, this.Exclude),
+      characters: exclude(alphabet.characters, generator.Exclude),
       minCount: alphabet.minCount,
       maxCount: alphabet.maxCount,
     }
   }
 
   store := core.CreateStore()
-  lengthVar := core.CreateIntVarFromTo("length", store, this.minLength, this.maxLength)
+  lengthVar := core.CreateIntVarFromTo("length", store, generator.minLength, generator.maxLength)
 
   parts := make([]core.VarId, 0)
 
@@ -243,7 +243,7 @@ func (this *Generator) Generate() (string, error)  {
     minCount := max(alphabet.minCount, 0)
     maxCount := alphabet.maxCount
     if maxCount == -1 {
-      maxCount = max(minCount, this.maxLength)
+      maxCount = max(minCount, generator.maxLength)
     }
 
     intVar := core.CreateIntVarFromTo(id, store, minCount, maxCount)
@@ -271,7 +271,7 @@ func (this *Generator) Generate() (string, error)  {
   choices := make([]*choice, len(results))
   for i, result := range results {
     choices[i] = &choice {
-      Weight: this.resultWeight(result, store, length, alphabets),
+      Weight: generator.resultWeight(result, store, length, alphabets),
       Item: result,
     }
   }

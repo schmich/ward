@@ -125,7 +125,7 @@ func (cipher *Cipher) Encrypt(plaintext []byte) []byte {
   nonce := cipher.GetNonce()
   cipher.nonce = cipher.nonce.Add(cipher.nonce, big.NewInt(1))
 
-  ciphertext := make([]byte, 0)
+  var ciphertext []byte
   ciphertext = cipher.aead.Seal(ciphertext, nonce, plaintextBuffer, []byte{})
 
   return append(ciphertext, nonce...)
@@ -136,7 +136,7 @@ func (cipher *Cipher) TryDecrypt(ciphertext []byte) ([]byte, error) {
   nonce := ciphertext[nonceStart:]
   ciphertext = ciphertext[:nonceStart]
 
-  plaintext := make([]byte, 0)
+  var plaintext []byte
   plaintext, err := cipher.aead.Open(plaintext, nonce, ciphertext, []byte{})
   if err != nil {
     var e IncorrectPasswordError
