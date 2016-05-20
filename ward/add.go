@@ -120,14 +120,14 @@ type passwordResult struct {
 }
 
 func (app *App) runGen(login, realm, note string, copyPassword bool, generator *passgen.Generator) {
-  db := app.openStore()
-  defer db.Close()
-
   passwordChan := make(chan *passwordResult)
   go func() {
     password, err := generator.Generate()
     passwordChan <- &passwordResult { password: password, err: err }
   }()
+
+  db := app.openStore()
+  defer db.Close()
 
   if login == "" {
     login = readInput("Login: ")
@@ -141,7 +141,15 @@ func (app *App) runGen(login, realm, note string, copyPassword bool, generator *
     note = readInput("Note: ")
   }
 
-  result := <-passwordChan
+  var result *passwordResult
+  select {
+  case result = <-passwordChan:
+    fmt.Println("Password: (generated)")
+  default:
+    fmt.Println("Password: (generating)")
+    result = <-passwordChan
+  }
+
   if result.err != nil {
     printError("%s\n", result.err)
     return
