@@ -4,7 +4,7 @@ Ward is a secure, cross-platform, zero-install, single-file password manager.
 
 Ward stores your passwords in an encrypted file which you manage with a single master password. You can keep track of multiple complex passwords without having to remember any of them.
 
-# Installation Options
+# Install
 
 - From latest release
   - [Download the zero-install binary](https://github.com/schmich/ward/releases) to a directory on your `PATH`
