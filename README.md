@@ -6,10 +6,8 @@ Ward stores your passwords in an encrypted file which you manage with a single m
 
 # Install
 
-- From latest release
-  - [Download the zero-install binary](https://github.com/schmich/ward/releases) to a directory on your `PATH`
-- From latest source
-  - `go get -u github.com/schmich/ward/... && go install github.com/schmich/ward/...`
+- [Download the zero-install binary](https://github.com/schmich/ward/releases) to a directory on your `PATH`; or
+- `go get -u github.com/schmich/ward/... && go install github.com/schmich/ward/...`
 
 # Usage
 
