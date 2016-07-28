@@ -23,8 +23,6 @@ func printError(format string, args ...interface {}) {
 
 func readInput(prompt string) string {
   fmt.Fprint(os.Stderr, prompt)
-  color.Set(color.FgHiBlack)
-  defer color.Unset()
   scanner.Scan()
   return scanner.Text()
 }
