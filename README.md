@@ -4,12 +4,12 @@ Ward is a secure, cross-platform, zero-install, single-file password manager.
 
 Ward stores your passwords in an encrypted file which you manage with a single master password. You can keep track of multiple complex passwords without having to remember any of them.
 
-# Install
+## Install
 
 - [Download the zero-install binary](https://github.com/schmich/ward/releases) to a directory on your `PATH`; or
 - `go get -u github.com/schmich/ward/... && go install github.com/schmich/ward/...`
 
-# Usage
+## Usage
 
     Usage: ward [OPTIONS] COMMAND [arg...]
 
@@ -95,7 +95,7 @@ The Ward database is stored at `~/.ward`. This can be overridden with the `WARDF
 
     export WARDFILE=~/dotfiles/ward
 
-# Password Generator
+## Password Generator
 
 Ward comes with a constraint-solving password generator that you can use when adding a new credential (`ward add --gen`). You can control length, character requirements, and exclusions:
 
@@ -127,7 +127,7 @@ Ward comes with a constraint-solving password generator that you can use when ad
       --max-symbol=-1      Maximum number of symbol characters in password.
       --exclude=""         Exclude specific characters from password.
 
-# License
+## License
 
 Copyright &copy; 2016 Chris Schmich  
 MIT License. See [LICENSE](LICENSE) for details.
