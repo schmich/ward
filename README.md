@@ -129,5 +129,5 @@ Ward comes with a constraint-solving password generator that you can use when ad
 
 # License
 
-Copyright &copy; 2016 Chris Schmich<br>
+Copyright &copy; 2016 Chris Schmich  
 MIT License. See [LICENSE](LICENSE) for details.
