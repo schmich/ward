@@ -3,7 +3,7 @@ package main
 import (
   "github.com/schmich/ward/store"
   "github.com/fatih/color"
-  "github.com/howeyc/gopass"
+  "golang.org/x/crypto/ssh/terminal"
   "strings"
   "strconv"
   "bufio"
@@ -29,10 +29,12 @@ func readInput(prompt string) string {
 
 func readPassword(prompt string) string {
   fmt.Fprint(os.Stderr, prompt)
-  password, err := gopass.GetPasswd()
+  password, err := terminal.ReadPassword(int(os.Stdin.Fd()))
   if err != nil {
     panic(err)
   }
+
+  fmt.Fprintln(os.Stderr, "")
   return string(password)
 }
 

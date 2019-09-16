@@ -7,7 +7,6 @@ require (
 	github.com/atotto/clipboard v0.1.2
 	github.com/fatih/color v1.7.0
 	github.com/fumiyas/qrc v0.1.2-0.20170906040115-b8670eb785dd
-	github.com/howeyc/gopass v0.0.0-20190910152052-7cb4b85ec19c
 	github.com/jawher/mow.cli v1.1.0
 	github.com/mattn/go-colorable v0.1.2
 	github.com/mattn/go-isatty v0.0.9 // indirect
